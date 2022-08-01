@@ -3,11 +3,9 @@ package power
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"syscall"
 
-	"github.com/burmilla/os/cmd/control/install"
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
 
@@ -152,39 +150,6 @@ func Shutdown() {
 }
 
 func Kexec(previous bool, bootDir, append string) error {
-	cfg := "linux-current.cfg"
-	if previous {
-		cfg = "linux-previous.cfg"
-	}
-	cfgFile := filepath.Join(bootDir, cfg)
-	vmlinuzFile, initrdFile, err := install.ReadSyslinuxCfg(cfgFile)
-	if err != nil {
-		log.Errorf("%s", err)
-		return err
-	}
-	globalCfgFile := filepath.Join(bootDir, "global.cfg")
-	if append == "" {
-		append, err = install.ReadGlobalCfg(globalCfgFile)
-		if err != nil {
-			log.Errorf("%s", err)
-			return err
-		}
-	}
-	// TODO: read global.cfg if append == ""
-	//    kexec -l ${DIST}/vmlinuz --initrd=${DIST}/initrd --append="${kernelArgs} ${APPEND}" -f
-	cmd := exec.Command(
-		"kexec",
-		"-l", vmlinuzFile,
-		"--initrd", initrdFile,
-		"--append", append,
-		"-f")
-	log.Debugf("Run(%#v)", cmd)
-	cmd.Stderr = os.Stderr
-	if _, err := cmd.Output(); err != nil {
-		log.Errorf("Failed to kexec: %s", err)
-		return err
-	}
-	log.Infof("kexec'd to new install")
 	return nil
 }
 

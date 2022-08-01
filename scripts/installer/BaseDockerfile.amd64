@@ -6,10 +6,11 @@ ARG KERNEL_VERSION
 ENV VERSION=${VERSION}
 ENV KERNEL_VERSION=${KERNEL_VERSION}
 
-# not installed atm udev, grub2, kexe-tools
+# not installed atm udev, kexe-tools
 # parted: partprobe, e2fsprogs: mkfs.ext4, syslinux: extlinux&syslinux
 # e2fsprogs-extra: chattr
-RUN apk --no-cache add syslinux parted e2fsprogs e2fsprogs-extra util-linux
+RUN apk --no-cache add efibootmgr parted e2fsprogs e2fsprogs-extra util-linux
+RUN apk --no-cache add refind --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/
 
 COPY conf /scripts/
 COPY ./build/ros /bin/
