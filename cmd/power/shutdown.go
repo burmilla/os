@@ -151,6 +151,7 @@ func Shutdown() {
 	app.Run(os.Args)
 }
 
+// Kexec - FixMe: Update this one using GRUB instead of SYSLINUX
 func Kexec(previous bool, bootDir, append string) error {
 	cfg := "linux-current.cfg"
 	if previous {

@@ -10,7 +10,7 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
     && sed -i "s|archive.ubuntu.com|${APT_ARCHIVE_SOURCE}|" /etc/apt/sources.list \
     && cat /etc/apt/sources.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
         cpio \
@@ -20,7 +20,6 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         genisoimage \
         gettext \
         git \
-        isolinux \
         less \
         libblkid-dev \
         libmount-dev \
@@ -32,9 +31,9 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         pkg-config \
         qemu \
         qemu-kvm \
+        refind \
         rsync \
         sudo \
-        syslinux-common \
         vim \
         wget \
         xorriso \

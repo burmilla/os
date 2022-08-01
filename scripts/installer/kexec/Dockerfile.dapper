@@ -10,7 +10,7 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
     && apt-get install -yq build-essential autoconf libtool gawk alien fakeroot \
         zlib1g-dev uuid-dev libattr1-dev libblkid-dev libselinux-dev libudev-dev libdevmapper-dev \
         module-init-tools \
-        parted lsscsi ksh curl git wget
+        parted dosfstools lsscsi ksh curl git wget
 
 WORKDIR /source
 

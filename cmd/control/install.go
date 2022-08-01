@@ -38,9 +38,9 @@ var installCommand = cli.Command{
 		},
 		cli.StringFlag{
 			Name: "install-type, t",
-			Usage: `generic:    (Default) Creates 1 ext4 partition and installs BurmillaOS (syslinux)
+			Usage: `gpt: (Default) partition and format disk (gpt), then install BurmillaOS and setup Syslinux
+						generic: Creates 1 ext4 partition and installs BurmillaOS (syslinux)
                         amazon-ebs: Installs BurmillaOS and sets up PV-GRUB
-                        gptsyslinux: partition and format disk (gpt), then install BurmillaOS and setup Syslinux
                         `,
 		},
 		cli.StringFlag{
@@ -132,8 +132,8 @@ func installAction(c *cli.Context) error {
 
 	installType := c.String("install-type")
 	if installType == "" {
-		log.Info("No install type specified...defaulting to generic")
-		installType = "generic"
+		log.Info("No install type specified...defaulting to gpt")
+		installType = "gpt"
 	}
 	if installType == "rancher-upgrade" ||
 		installType == "upgrade" {
@@ -304,9 +304,9 @@ func runInstall(image, installType, cloudConfig, device, partition, statedir, ka
 	if partition == "" {
 		if installType == "generic" ||
 			installType == "syslinux" ||
-			installType == "gptsyslinux" {
+			installType == "gpt" {
 			diskType := "msdos"
-			if installType == "gptsyslinux" {
+			if installType == "gpt" {
 				diskType = "gpt"
 			}
 			log.Debugf("running setDiskpartitions")
@@ -368,9 +368,9 @@ func getBootIso() (string, string, error) {
 	deviceName := "/dev/sr0"
 	deviceType := "iso9660"
 
-	// Our ISO LABEL is RancherOS
-	// But some tools(like rufus) will change LABEL to RANCHEROS
-	for _, label := range []string{"RancherOS", "RANCHEROS"} {
+	// Our ISO LABEL is BurmillaOS
+	// But some tools(like rufus) will change LABEL to BURMILLAOS
+	for _, label := range []string{"BurmillaOS", "BURMILLAOS"} {
 		d, t := getDeviceByLabel(label)
 		if d != "" {
 			deviceName = d
@@ -435,19 +435,40 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	defer util.Unmount(baseName)
 
 	diskType := "msdos"
-	if installType == "gptsyslinux" {
+	if installType == "gpt" {
 		diskType = "gpt"
 	}
 
 	switch installType {
 	case "syslinux":
 		fallthrough
-	case "gptsyslinux":
-		fallthrough
+	case "gpt":
+		log.Debugf("formatAndMount")
+		var err error
+		device, _, err = formatAndMount(baseName, device, device+"2", false)
+		if err != nil {
+			log.Errorf("formatAndMount %s", err)
+			return err
+		}
+		device, _, err = formatAndMount(baseName+"/boot", device, device+"1", true)
+		if err != nil {
+			log.Errorf("formatAndMount %s", err)
+			return err
+		}
+		err = install.RunRefind(device)
+		if err != nil {
+			log.Errorf("RunRefind %s", err)
+			return err
+		}
+		err = seedData(baseName, cloudConfig, FILES)
+		if err != nil {
+			log.Errorf("seedData %s", err)
+			return err
+		}
 	case "generic":
 		log.Debugf("formatAndMount")
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			log.Errorf("formatAndMount %s", err)
 			return err
@@ -464,7 +485,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 		}
 	case "arm":
 		var err error
-		_, _, err = formatAndMount(baseName, device, partition)
+		_, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -474,7 +495,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	case "amazon-ebs-hvm":
 		CONSOLE = "ttyS0"
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -486,7 +507,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	case "googlecompute":
 		CONSOLE = "ttyS0"
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -533,6 +554,8 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 		}
 		log.Debugf("upgrading - %s, %s, %s", device, baseName, diskType)
 		// TODO: detect pv-grub, and don't kill it with syslinux
+
+		// TODO: Test upgrade scenario
 		upgradeBootloader(device, baseName, diskType)
 	default:
 		return fmt.Errorf("unexpected install type %s", installType)
@@ -546,26 +569,8 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 		ioutil.WriteFile(filepath.Join(baseName, config.BootDir, "append"), []byte(kappend), 0644)
 	}
 
-	if installType == "amazon-ebs-pv" {
-		menu := install.BootVars{
-			BaseName: baseName,
-			BootDir:  config.BootDir,
-			Timeout:  0,
-			Fallback: 0, // need to be conditional on there being a 'rollback'?
-			Entries: []install.MenuEntry{
-				install.MenuEntry{
-					Name:       "BurmillaOS-current",
-					BootDir:    config.BootDir,
-					Version:    VERSION,
-					KernelArgs: kernelArgs,
-					Append:     kappend,
-				},
-			},
-		}
-		install.PvGrubConfig(menu)
-	}
 	log.Debugf("installRancher")
-	_, err := installRancher(baseName, VERSION, DIST, kernelArgs+" "+kappend)
+	err := installRancher(baseName, VERSION, DIST, kernelArgs+" "+kappend)
 	if err != nil {
 		log.Errorf("%s", err)
 		return err
@@ -734,6 +739,22 @@ func setDiskpartitions(device, diskType string) error {
 		return err
 	}
 
+	if diskType == "gpt" {
+		log.Debugf("making UEFI partition, device: %s", device)
+		cmd = exec.Command("parted", "-s", "-a", "optimal", device,
+			"mklabel gpt",
+			"mkpart ESP fat32 1MiB 512MiB",
+			"set 1 boot on",
+			"mkpart primary ext4 512MiB 100%",
+			"quit")
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Errorf("Failed to parted device %s: %v", device, err)
+			return err
+		}
+		return nil
+	}
+
 	log.Debugf("making single RANCHER_STATE partition, device: %s", device)
 	cmd = exec.Command("parted", "-s", "-a", "optimal", device,
 		"mklabel "+diskType, "--",
@@ -765,12 +786,24 @@ func partitionMounted(device string, file io.Reader) bool {
 	return false
 }
 
-func formatdevice(device, partition string) error {
+func formatdevice(device, partition string, efi bool) error {
 	log.Debugf("formatdevice %s", partition)
+
+	if efi {
+		cmd := exec.Command("mkfs.vfat", partition)
+		log.Debugf("Run(%v)", cmd)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Errorf("mkfs.vfat: %s", err)
+			return err
+		}
+		return nil
+	}
 
 	//mkfs.ext4 -F -i 4096 -L RANCHER_STATE ${partition}
 	// -O ^64bit: for syslinux: http://www.syslinux.org/wiki/index.php?title=Filesystem#ext
-	cmd := exec.Command("mkfs.ext4", "-F", "-i", "4096", "-O", "^64bit", "-L", "RANCHER_STATE", partition)
+	// Flag removed on Burmilla, it was enabled by https://github.com/rancher/os/pull/1456 to simplify development
+	cmd := exec.Command("mkfs.ext4", "-F", "-i", "4096", "-L", "RANCHER_STATE", partition)
 	log.Debugf("Run(%v)", cmd)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -780,10 +813,10 @@ func formatdevice(device, partition string) error {
 	return nil
 }
 
-func formatAndMount(baseName, device, partition string) (string, string, error) {
+func formatAndMount(baseName, device, partition string, efi bool) (string, string, error) {
 	log.Debugf("formatAndMount")
 
-	err := formatdevice(device, partition)
+	err := formatdevice(device, partition, efi)
 	if err != nil {
 		log.Errorf("formatdevice %s", err)
 		return device, partition, err
@@ -997,25 +1030,8 @@ func different(existing, new string) bool {
 	return false
 }
 
-func installRancher(baseName, VERSION, DIST, kappend string) (string, error) {
+func installRancher(baseName, VERSION, DIST, kappend string) (error) {
 	log.Debugf("installRancher")
-
-	// detect if there already is a linux-current.cfg, if so, move it to linux-previous.cfg,
-	currentCfg := filepath.Join(baseName, config.BootDir, "linux-current.cfg")
-	if _, err := os.Stat(currentCfg); !os.IsNotExist(err) {
-		existingCfg := filepath.Join(DIST, "linux-current.cfg")
-		// only remove previous if there is a change to the current
-		if different(currentCfg, existingCfg) {
-			previousCfg := filepath.Join(baseName, config.BootDir, "linux-previous.cfg")
-			if _, err := os.Stat(previousCfg); !os.IsNotExist(err) {
-				if err := os.Remove(previousCfg); err != nil {
-					return currentCfg, err
-				}
-			}
-			os.Rename(currentCfg, previousCfg)
-			// TODO: now that we're parsing syslinux.cfg files, maybe we can delete old kernels and initrds
-		}
-	}
 
 	// The image/ISO have all the files in it - the syslinux cfg's and the kernel&initrd, so we can copy them all from there
 	files, _ := ioutil.ReadDir(DIST)
@@ -1023,36 +1039,11 @@ func installRancher(baseName, VERSION, DIST, kappend string) (string, error) {
 		if file.IsDir() {
 			continue
 		}
-		// TODO: should overwrite anything other than the global.cfg
 		overwrite := true
-		if file.Name() == "global.cfg" {
-			overwrite = false
-		}
 		if err := dfs.CopyFileOverwrite(filepath.Join(DIST, file.Name()), filepath.Join(baseName, config.BootDir), file.Name(), overwrite); err != nil {
 			log.Errorf("copy %s: %s", file.Name(), err)
-			//return err
+			return err
 		}
 	}
-
-	// the general INCLUDE syslinuxcfg
-	isolinuxFile := filepath.Join(DIST, "isolinux", "isolinux.cfg")
-	syslinuxDir := filepath.Join(baseName, config.BootDir, "syslinux")
-	if err := dfs.CopyFileOverwrite(isolinuxFile, syslinuxDir, "syslinux.cfg", true); err != nil {
-		log.Errorf("copy global syslinux.cfgS%s: %s", "syslinux.cfg", err)
-		//return err
-	} else {
-		log.Debugf("installRancher copy global syslinux.cfgS OK")
-
-	}
-
-	// The global.cfg INCLUDE - useful for over-riding the APPEND line
-	globalFile := filepath.Join(baseName, config.BootDir, "global.cfg")
-	if _, err := os.Stat(globalFile); !os.IsNotExist(err) {
-		err := ioutil.WriteFile(globalFile, []byte("APPEND "+kappend), 0644)
-		if err != nil {
-			log.Errorf("write (%s) %s", "global.cfg", err)
-			return currentCfg, err
-		}
-	}
-	return currentCfg, nil
+	return nil
 }

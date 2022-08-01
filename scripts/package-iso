@@ -10,34 +10,40 @@ CD=${BUILD}/cd
 rm -rf ${CD}/
 ISO=${ARTIFACTS}/$(echo ${DISTRIB_ID} | tr '[:upper:]' '[:lower:]').iso
 
-mkdir -p ${CD}/boot/isolinux
 mkdir -p ${CD}/rancheros
-
-cp ${ARTIFACTS}/${INITRD}                     ${CD}/boot
+mkdir -p ${CD}/boot
+cp ${ARTIFACTS}/${INITRD}                     ${CD}/boot/
 
 # TODO: these move to os-kernel
 pwd
 ls dist/artifacts/vmlinuz-${KERNEL_VERSION}
-cp ${ARTIFACTS}/vmlinuz-${KERNEL_VERSION}     ${CD}/boot/
+cp ${ARTIFACTS}/vmlinuz-${KERNEL_VERSION}     ${CD}/boot/vmlinuz-${VERSION}
 #TODO cp ${ARTIFACTS}/linuxmods-${KERNEL_VERSION}   ${CD}/boot/
 
-# cfg files creation moved to package-installer
+# Include EFI files
 DIST=$(pwd)/dist
-cp -r ${DIST}/boot/* ${CD}/boot/
+mkdir -p ${CD}/EFI/boot
+mkdir -p ${CD}/EFI/boot/drivers_x64
+cp /$(pwd)/scripts/refin*.conf ${CD}/EFI/boot/
+cp /usr/share/refind/refind/refind_x64.efi ${CD}/EFI/boot/
+cp /usr/share/refind/refind/drivers_x64/iso9660_x64.efi ${CD}/EFI/boot/drivers_x64/
 
-cp /usr/lib/ISOLINUX/isolinux.bin              ${CD}/boot/isolinux/
-cp /usr/lib/syslinux/modules/bios/ldlinux.c32  ${CD}/boot/isolinux/
-cp /usr/lib/syslinux/modules/bios/*.c32        ${CD}/boot/isolinux/
 # add the installer image to the iso for non-network / dev/test
 cp ${ARTIFACTS}/installer.tar                  ${CD}/rancheros/
 cp ${ARTIFACTS}/Dockerfile.${ARCH}             ${CD}/rancheros/
 gzip ${CD}/rancheros/installer.tar
-cd ${CD} && xorriso \
-    -as mkisofs \
-    -l -J -R -V "${DISTRIB_ID}" \
-    -no-emul-boot -boot-load-size 4 -boot-info-table \
-    -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
-    -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-    -o $ISO ${CD}
+
+# Prepare a FAT filesystem image and populate it with the
+# EFI boot files....
+dd if=/dev/zero of=refind.img bs=1024 count=1024
+mkdosfs -n "ESP" refind.img
+mcopy -irefind.img -s ${CD}/EFI $(pwd)/assets/shellx64.efi ::/
+
+# Make the ISO-9660 image file....
+cd ${CD} && mkisofs -V "BurmillaOS" \
+    -J -r -v -o $ISO \
+    -eltorito-alt-boot -efi-boot ../refind.img \
+    -no-emul-boot .
 
 cd $(dirname $ISO)
+
