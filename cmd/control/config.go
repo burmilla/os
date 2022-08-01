@@ -81,8 +81,8 @@ func configSubcommands() []cli.Command {
 			},
 		},
 		{
-			Name:   "syslinux",
-			Usage:  "edit Syslinux boot global.cfg",
+			Name:   "grub",
+			Usage:  "edit Grub boot grub.cfg",
 			Action: editSyslinux,
 		},
 		{
@@ -167,9 +167,9 @@ func editSyslinux(c *cli.Context) error {
 
 	if isExist := checkGlobalCfg(); !isExist {
 		buf := bufio.NewWriter(os.Stdout)
-		fmt.Fprintln(buf, "global.cfg can not be found")
+		fmt.Fprintln(buf, "grub.cfg can not be found")
 		buf.Flush()
-		return errors.New("global.cfg can not be found")
+		return errors.New("grub.cfg can not be found")
 	}
 
 	cmd := exec.Command("system-docker", "run", "--rm", "-it",
@@ -177,7 +177,7 @@ func editSyslinux(c *cli.Context) error {
 		"-w", "/host",
 		"--entrypoint=nano",
 		"burmilla/os-console:"+config.Version,
-		"boot/global.cfg")
+		"boot/grub.cfg")
 	cmd.Stdout, cmd.Stderr, cmd.Stdin = os.Stdout, os.Stderr, os.Stdin
 	return cmd.Run()
 }

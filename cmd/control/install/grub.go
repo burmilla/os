@@ -12,8 +12,7 @@ import (
 func RunGrub(baseName, device string) error {
 	log.Debugf("installGrub")
 
-	//grub-install --boot-directory=${baseName}/boot ${device}
-	cmd := exec.Command("grub-install", "--boot-directory="+baseName+"/boot", device)
+	cmd := exec.Command("grub-install", "--root-directory="+baseName+"/boot", "--boot-directory="+baseName+"/boot", device)
 	if err := cmd.Run(); err != nil {
 		log.Errorf("%s", err)
 		return err
@@ -21,13 +20,13 @@ func RunGrub(baseName, device string) error {
 	return nil
 }
 
-func grubConfig(menu BootVars) error {
-	log.Debugf("grubConfig")
+func GrubConfig(menu BootVars) error {
+	log.Debugf("GrubConfig")
 
 	filetmpl, err := template.New("grub2config").Parse(`{{define "grub2menu"}}menuentry "{{.Name}}" {
   set root=(hd0,msdos1)
-  linux /{{.bootDir}}vmlinuz-{{.Version}}-rancheros {{.KernelArgs}} {{.Append}}
-  initrd /{{.bootDir}}initrd-{{.Version}}-rancheros
+  linux /{{.BootDir}}vmlinuz-{{.Version}}-rancheros {{.KernelArgs}} {{.Append}}
+  initrd /{{.BootDir}}initrd-{{.Version}}-rancheros
 }
 
 {{end}}
@@ -45,8 +44,8 @@ set timeout="{{.Timeout}}"
 		return err
 	}
 
-	cfgFile := filepath.Join(menu.BaseName, menu.BootDir+"grub/grub.cfg")
-	log.Debugf("grubConfig written to %s", cfgFile)
+	cfgFile := filepath.Join(menu.BaseName, menu.BootDir+"/grub/grub.cfg")
+	log.Debugf("GrubConfig written to %s", cfgFile)
 
 	f, err := os.Create(cfgFile)
 	if err != nil {
@@ -65,8 +64,8 @@ func PvGrubConfig(menu BootVars) error {
 	filetmpl, err := template.New("grublst").Parse(`{{define "grubmenu"}}
 title BurmillaOS {{.Version}}-({{.Name}})
 root (hd0)
-kernel /${bootDir}vmlinuz-{{.Version}}-rancheros {{.KernelArgs}} {{.Append}}
-initrd /${bootDir}initrd-{{.Version}}-rancheros
+kernel /${BootDir}vmlinuz-{{.Version}}-rancheros {{.KernelArgs}} {{.Append}}
+initrd /${BootDir}initrd-{{.Version}}-rancheros
 
 {{end}}
 default 0
@@ -85,7 +84,7 @@ hiddenmenu
 		return err
 	}
 
-	cfgFile := filepath.Join(menu.BaseName, menu.BootDir+"grub/menu.lst")
+	cfgFile := filepath.Join(menu.BaseName, menu.BootDir+"/grub/menu.lst")
 	log.Debugf("grubMenu written to %s", cfgFile)
 	f, err := os.Create(cfgFile)
 	if err != nil {

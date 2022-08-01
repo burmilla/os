@@ -15,23 +15,7 @@ cd scripts/installer/kexec
 dapper
 popd
 
-
-# TODO maybe extract the creation of the syslinux cfg files
 DIST=$(pwd)/dist
-echo "mkdir -p ${DIST}/boot/isolinux/"
-mkdir -p ${DIST}/boot/isolinux/
-cat scripts/isolinux.cfg | envsubst > ${DIST}/boot/isolinux/isolinux.cfg
-cat scripts/isolinux_label.cfg | LABEL=${VERSION} envsubst > ${DIST}/boot/linux-current.cfg
-#cat scripts/isolinux_label.cfg | LABEL=debug APPEND="rancher.debug=true" envsubst > ${DIST}/boot/linux-previous.cfg
-if [ "$OS_AUTOFORMAT" = "true" ]; then
-    APPEND_AUTOFORMAT="rancher.state.autoformat=[/dev/sda,/dev/vda] rancher.state.dev=LABEL=RANCHER_STATE rancher.state.wait=true"
-    cat scripts/global.cfg | APPEND="$APPEND_AUTOFORMAT" envsubst > ${DIST}/boot/global.cfg
-else
-    cat scripts/global.cfg | envsubst > ${DIST}/boot/global.cfg
-fi
-cp scripts/burmilla.png ${DIST}/boot/
-
-
 mkdir -p ./scripts/installer/build/boot
 cp ./bin/ros ./scripts/installer/build
 trap "rm -rf ./scripts/installer/build" EXIT
@@ -49,7 +33,6 @@ cp $DOCKERFILE ${ARTIFACTS}/
 
 cp ${ARTIFACTS}/${INITRD} ./scripts/installer/build/boot
 cp ${ARTIFACTS}/vmlinuz-${KERNEL_VERSION} ./scripts/installer/build/boot
-cp -r ${DIST}/boot/* ./scripts/installer/build/boot
 cp $DOCKERFILE ./scripts/installer/build/Dockerfile
 # Full installer image with initrd - used for pulling from network
 docker build \

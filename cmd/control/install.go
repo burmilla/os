@@ -38,9 +38,9 @@ var installCommand = cli.Command{
 		},
 		cli.StringFlag{
 			Name: "install-type, t",
-			Usage: `generic:    (Default) Creates 1 ext4 partition and installs BurmillaOS (syslinux)
+			Usage: `gpt: (Default) partition and format disk (gpt), then install BurmillaOS and setup Syslinux
+						generic: Creates 1 ext4 partition and installs BurmillaOS (syslinux)
                         amazon-ebs: Installs BurmillaOS and sets up PV-GRUB
-                        gptsyslinux: partition and format disk (gpt), then install BurmillaOS and setup Syslinux
                         `,
 		},
 		cli.StringFlag{
@@ -132,8 +132,8 @@ func installAction(c *cli.Context) error {
 
 	installType := c.String("install-type")
 	if installType == "" {
-		log.Info("No install type specified...defaulting to generic")
-		installType = "generic"
+		log.Info("No install type specified...defaulting to gpt")
+		installType = "gpt"
 	}
 	if installType == "rancher-upgrade" ||
 		installType == "upgrade" {
@@ -304,9 +304,9 @@ func runInstall(image, installType, cloudConfig, device, partition, statedir, ka
 	if partition == "" {
 		if installType == "generic" ||
 			installType == "syslinux" ||
-			installType == "gptsyslinux" {
+			installType == "gpt" {
 			diskType := "msdos"
-			if installType == "gptsyslinux" {
+			if installType == "gpt" {
 				diskType = "gpt"
 			}
 			log.Debugf("running setDiskpartitions")
@@ -368,9 +368,9 @@ func getBootIso() (string, string, error) {
 	deviceName := "/dev/sr0"
 	deviceType := "iso9660"
 
-	// Our ISO LABEL is RancherOS
-	// But some tools(like rufus) will change LABEL to RANCHEROS
-	for _, label := range []string{"RancherOS", "RANCHEROS"} {
+	// Our ISO LABEL is BurmillaOS
+	// But some tools(like rufus) will change LABEL to BURMILLAOS
+	for _, label := range []string{"BurmillaOS", "BURMILLAOS"} {
 		d, t := getDeviceByLabel(label)
 		if d != "" {
 			deviceName = d
@@ -422,7 +422,6 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	VERSION := image[strings.Index(image, ":")+1:]
 
 	var FILES []string
-	DIST := "/dist" //${DIST:-/dist}
 	//cloudConfig := SCRIPTS_DIR + "/conf/empty.yml" //${cloudConfig:-"${SCRIPTS_DIR}/conf/empty.yml"}
 	CONSOLE := "tty0"
 	baseName := "/mnt/new_img"
@@ -435,19 +434,40 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	defer util.Unmount(baseName)
 
 	diskType := "msdos"
-	if installType == "gptsyslinux" {
+	if installType == "gpt" {
 		diskType = "gpt"
 	}
 
 	switch installType {
 	case "syslinux":
 		fallthrough
-	case "gptsyslinux":
-		fallthrough
+	case "gpt":
+		log.Debugf("formatAndMount")
+		var err error
+		device, _, err = formatAndMount(baseName, device, device+"2", false)
+		if err != nil {
+			log.Errorf("formatAndMount %s", err)
+			return err
+		}
+		device, _, err = formatAndMount(baseName+"/boot", device, device+"1", true)
+		if err != nil {
+			log.Errorf("formatAndMount %s", err)
+			return err
+		}
+		err = install.RunGrub(baseName, device)
+		if err != nil {
+			log.Errorf("RunGrub %s", err)
+			return err
+		}
+		err = seedData(baseName, cloudConfig, FILES)
+		if err != nil {
+			log.Errorf("seedData %s", err)
+			return err
+		}
 	case "generic":
 		log.Debugf("formatAndMount")
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			log.Errorf("formatAndMount %s", err)
 			return err
@@ -464,7 +484,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 		}
 	case "arm":
 		var err error
-		_, _, err = formatAndMount(baseName, device, partition)
+		_, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -474,7 +494,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	case "amazon-ebs-hvm":
 		CONSOLE = "ttyS0"
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -486,7 +506,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	case "googlecompute":
 		CONSOLE = "ttyS0"
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -546,6 +566,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 		ioutil.WriteFile(filepath.Join(baseName, config.BootDir, "append"), []byte(kappend), 0644)
 	}
 
+	log.Debugf("installRancher")
 	if installType == "amazon-ebs-pv" {
 		menu := install.BootVars{
 			BaseName: baseName,
@@ -563,12 +584,27 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 			},
 		}
 		install.PvGrubConfig(menu)
-	}
-	log.Debugf("installRancher")
-	_, err := installRancher(baseName, VERSION, DIST, kernelArgs+" "+kappend)
-	if err != nil {
-		log.Errorf("%s", err)
-		return err
+	} else {
+		menu := install.BootVars{
+			BaseName: baseName,
+			BootDir:  config.BootDir,
+			Timeout:  0,
+			Fallback: 0, // need to be conditional on there being a 'rollback'?
+			Entries: []install.MenuEntry{
+				install.MenuEntry{
+					Name:       "BurmillaOS-current",
+					BootDir:    config.BootDir + "/",
+					Version:    VERSION,
+					KernelArgs: kernelArgs,
+					Append:     kappend,
+				},
+			},
+		}
+		err := install.GrubConfig(menu)
+		if err != nil {
+			log.Errorf("%s", err)
+			return err
+		}
 	}
 	log.Debugf("installRancher done")
 
@@ -734,6 +770,22 @@ func setDiskpartitions(device, diskType string) error {
 		return err
 	}
 
+	if diskType == "gpt" {
+		log.Debugf("making UEFI partition, device: %s", device)
+		cmd = exec.Command("parted", "-s", "-a", "optimal", device,
+			"mklabel gpt",
+			"mkpart ESP fat32 1MiB 512MiB",
+			"set 1 boot on",
+			"mkpart primary ext4 512MiB 100%",
+			"quit")
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Errorf("Failed to parted device %s: %v", device, err)
+			return err
+		}
+		return nil
+	}
+
 	log.Debugf("making single RANCHER_STATE partition, device: %s", device)
 	cmd = exec.Command("parted", "-s", "-a", "optimal", device,
 		"mklabel "+diskType, "--",
@@ -765,12 +817,24 @@ func partitionMounted(device string, file io.Reader) bool {
 	return false
 }
 
-func formatdevice(device, partition string) error {
+func formatdevice(device, partition string, efi bool) error {
 	log.Debugf("formatdevice %s", partition)
+
+	if efi {
+		cmd := exec.Command("mkfs.vfat", partition)
+		log.Debugf("Run(%v)", cmd)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Errorf("mkfs.vfat: %s", err)
+			return err
+		}
+		return nil
+	}
 
 	//mkfs.ext4 -F -i 4096 -L RANCHER_STATE ${partition}
 	// -O ^64bit: for syslinux: http://www.syslinux.org/wiki/index.php?title=Filesystem#ext
-	cmd := exec.Command("mkfs.ext4", "-F", "-i", "4096", "-O", "^64bit", "-L", "RANCHER_STATE", partition)
+	// Flag removed on Burmilla, it was enabled by https://github.com/rancher/os/pull/1456 to simplify development
+	cmd := exec.Command("mkfs.ext4", "-F", "-i", "4096", "-L", "RANCHER_STATE", partition)
 	log.Debugf("Run(%v)", cmd)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -780,10 +844,10 @@ func formatdevice(device, partition string) error {
 	return nil
 }
 
-func formatAndMount(baseName, device, partition string) (string, string, error) {
+func formatAndMount(baseName, device, partition string, efi bool) (string, string, error) {
 	log.Debugf("formatAndMount")
 
-	err := formatdevice(device, partition)
+	err := formatdevice(device, partition, efi)
 	if err != nil {
 		log.Errorf("formatdevice %s", err)
 		return device, partition, err

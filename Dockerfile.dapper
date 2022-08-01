@@ -20,7 +20,8 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         genisoimage \
         gettext \
         git \
-        isolinux \
+        grub2-common \
+        grub-efi-amd64 \
         less \
         libblkid-dev \
         libmount-dev \
@@ -34,7 +35,6 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         qemu-kvm \
         rsync \
         sudo \
-        syslinux-common \
         vim \
         wget \
         xorriso \
