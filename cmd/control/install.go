@@ -38,9 +38,7 @@ var installCommand = cli.Command{
 		},
 		cli.StringFlag{
 			Name: "install-type, t",
-			Usage: `gpt: (Default) partition and format disk (gpt), then install BurmillaOS and setup Syslinux
-						generic: Creates 1 ext4 partition and installs BurmillaOS (syslinux)
-                        amazon-ebs: Installs BurmillaOS and sets up PV-GRUB
+			Usage: `gpt: (Default) partition and format disk (gpt), then install BurmillaOS and setup rEFInd
                         `,
 		},
 		cli.StringFlag{
@@ -302,9 +300,7 @@ func runInstall(image, installType, cloudConfig, device, partition, statedir, ka
 	log.Debugf("running installation")
 
 	if partition == "" {
-		if installType == "generic" ||
-			installType == "syslinux" ||
-			installType == "gpt" {
+		if installType == "gpt" {
 			diskType := "msdos"
 			if installType == "gpt" {
 				diskType = "gpt"
@@ -440,8 +436,6 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	}
 
 	switch installType {
-	case "syslinux":
-		fallthrough
 	case "gpt":
 		log.Debugf("formatAndMount")
 		var err error
@@ -465,84 +459,6 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 			log.Errorf("seedData %s", err)
 			return err
 		}
-	case "generic":
-		log.Debugf("formatAndMount")
-		var err error
-		device, _, err = formatAndMount(baseName, device, partition, false)
-		if err != nil {
-			log.Errorf("formatAndMount %s", err)
-			return err
-		}
-		err = installSyslinux(device, baseName, diskType)
-		if err != nil {
-			log.Errorf("installSyslinux %s", err)
-			return err
-		}
-		err = seedData(baseName, cloudConfig, FILES)
-		if err != nil {
-			log.Errorf("seedData %s", err)
-			return err
-		}
-	case "arm":
-		var err error
-		_, _, err = formatAndMount(baseName, device, partition, false)
-		if err != nil {
-			return err
-		}
-		seedData(baseName, cloudConfig, FILES)
-	case "amazon-ebs-pv":
-		fallthrough
-	case "amazon-ebs-hvm":
-		CONSOLE = "ttyS0"
-		var err error
-		device, _, err = formatAndMount(baseName, device, partition, false)
-		if err != nil {
-			return err
-		}
-		if installType == "amazon-ebs-hvm" {
-			installSyslinux(device, baseName, diskType)
-		}
-		//# AWS Networking recommends disabling.
-		seedData(baseName, cloudConfig, FILES)
-	case "googlecompute":
-		CONSOLE = "ttyS0"
-		var err error
-		device, _, err = formatAndMount(baseName, device, partition, false)
-		if err != nil {
-			return err
-		}
-		installSyslinux(device, baseName, diskType)
-		seedData(baseName, cloudConfig, FILES)
-	case "noformat":
-		var err error
-		device, _, err = install.MountDevice(baseName, device, partition, false)
-		if err != nil {
-			return err
-		}
-		installSyslinux(device, baseName, diskType)
-		if err := os.MkdirAll(filepath.Join(baseName, statedir), 0755); err != nil {
-			return err
-		}
-		err = seedData(baseName, cloudConfig, FILES)
-		if err != nil {
-			log.Errorf("seedData %s", err)
-			return err
-		}
-	case "raid":
-		var err error
-		device, _, err = install.MountDevice(baseName, device, partition, false)
-		if err != nil {
-			return err
-		}
-		installSyslinux(device, baseName, diskType)
-	case "bootstrap":
-		CONSOLE = "ttyS0"
-		var err error
-		_, _, err = install.MountDevice(baseName, device, partition, true)
-		if err != nil {
-			return err
-		}
-		kernelArgs = kernelArgs + " rancher.cloud_init.datasources=[ec2,gce]"
 	case "rancher-upgrade":
 		installType = "upgrade" // rancher-upgrade is redundant
 		fallthrough
@@ -849,163 +765,6 @@ func setBootable(device, diskType string) error {
 
 func upgradeBootloader(device, baseName, diskType string) error {
 	log.Debugf("start upgradeBootloader")
-
-	grubDir := filepath.Join(baseName, config.BootDir, "grub")
-	if _, err := os.Stat(grubDir); os.IsNotExist(err) {
-		log.Debugf("%s does not exist - no need to upgrade bootloader", grubDir)
-		// we've already upgraded
-		// TODO: in v0.9.0, need to detect what version syslinux we have
-		return nil
-	}
-	// deal with systems which were previously upgraded, then rolled back, and are now being re-upgraded
-	grubBackup := filepath.Join(baseName, config.BootDir, "grub_backup")
-	if err := os.RemoveAll(grubBackup); err != nil {
-		log.Errorf("RemoveAll (%s): %s", grubBackup, err)
-		return err
-	}
-	backupSyslinuxDir := filepath.Join(baseName, config.BootDir, "syslinux_backup")
-	if _, err := os.Stat(backupSyslinuxDir); !os.IsNotExist(err) {
-		backupSyslinuxLdlinuxSys := filepath.Join(backupSyslinuxDir, "ldlinux.sys")
-		if _, err := os.Stat(backupSyslinuxLdlinuxSys); !os.IsNotExist(err) {
-			//need a privileged container that can chattr -i ldlinux.sys
-			cmd := exec.Command("chattr", "-i", backupSyslinuxLdlinuxSys)
-			if err := cmd.Run(); err != nil {
-				log.Errorf("%s", err)
-				return err
-			}
-		}
-
-		if err := os.RemoveAll(backupSyslinuxDir); err != nil {
-			log.Errorf("RemoveAll (%s): %s", backupSyslinuxDir, err)
-			return err
-		}
-	}
-
-	if err := os.Rename(grubDir, grubBackup); err != nil {
-		log.Errorf("Rename(%s): %s", grubDir, err)
-		return err
-	}
-
-	syslinuxDir := filepath.Join(baseName, config.BootDir, "syslinux")
-	// it seems that v0.5.0 didn't have a syslinux dir, while 0.7 does
-	if _, err := os.Stat(syslinuxDir); !os.IsNotExist(err) {
-		if err := os.Rename(syslinuxDir, backupSyslinuxDir); err != nil {
-			log.Infof("error Rename(%s, %s): %s", syslinuxDir, backupSyslinuxDir, err)
-		} else {
-			//mv the old syslinux into linux-previous.cfg
-			oldSyslinux, err := ioutil.ReadFile(filepath.Join(backupSyslinuxDir, "syslinux.cfg"))
-			if err != nil {
-				log.Infof("error read(%s / syslinux.cfg): %s", backupSyslinuxDir, err)
-			} else {
-				cfg := string(oldSyslinux)
-				//DEFAULT BurmillaOS-current
-				//
-				//LABEL BurmillaOS-current
-				//    LINUX ../vmlinuz-v0.7.1-rancheros
-				//    APPEND rancher.state.dev=LABEL=RANCHER_STATE rancher.state.wait console=tty0 rancher.password=rancher
-				//    INITRD ../initrd-v0.7.1-rancheros
-
-				cfg = strings.Replace(cfg, "current", "previous", -1)
-				// TODO consider removing the APPEND line - as the global.cfg should have the same result
-				ioutil.WriteFile(filepath.Join(baseName, config.BootDir, "linux-current.cfg"), []byte(cfg), 0644)
-
-				lines := strings.Split(cfg, "\n")
-				for _, line := range lines {
-					line = strings.TrimSpace(line)
-					if strings.HasPrefix(line, "APPEND") {
-						log.Errorf("write new (%s) %s", filepath.Join(baseName, config.BootDir, "global.cfg"), err)
-						// TODO: need to append any extra's the user specified
-						ioutil.WriteFile(filepath.Join(baseName, config.BootDir, "global.cfg"), []byte(cfg), 0644)
-						break
-					}
-				}
-			}
-		}
-	}
-
-	return installSyslinux(device, baseName, diskType)
-}
-
-func installSyslinux(device, baseName, diskType string) error {
-	log.Debugf("installSyslinux(%s)", device)
-
-	mbrFile := "mbr.bin"
-	if diskType == "gpt" {
-		mbrFile = "gptmbr.bin"
-	}
-
-	//dd bs=440 count=1 if=/usr/lib/syslinux/mbr/mbr.bin of=${device}
-	// ubuntu: /usr/lib/syslinux/mbr/mbr.bin
-	// alpine: /usr/share/syslinux/mbr.bin
-	if device == "/dev/" {
-		log.Debugf("installSyslinuxRaid(%s)", device)
-		//RAID - assume sda&sdb
-		//TODO: fix this - not sure how to detect what disks should have mbr - perhaps we need a param
-		//      perhaps just assume and use the devices that make up the raid - mdadm
-		device = "/dev/sda"
-		if err := setBootable(device, diskType); err != nil {
-			log.Errorf("setBootable(%s, %s): %s", device, diskType, err)
-			//return err
-		}
-		cmd := exec.Command("dd", "bs=440", "count=1", "if=/usr/share/syslinux/"+mbrFile, "of="+device)
-		if err := cmd.Run(); err != nil {
-			log.Errorf("%s", err)
-			return err
-		}
-		device = "/dev/sdb"
-		if err := setBootable(device, diskType); err != nil {
-			log.Errorf("setBootable(%s, %s): %s", device, diskType, err)
-			//return err
-		}
-		cmd = exec.Command("dd", "bs=440", "count=1", "if=/usr/share/syslinux/"+mbrFile, "of="+device)
-		if err := cmd.Run(); err != nil {
-			log.Errorf("%s", err)
-			return err
-		}
-	} else {
-		if err := setBootable(device, diskType); err != nil {
-			log.Errorf("setBootable(%s, %s): %s", device, diskType, err)
-			//return err
-		}
-		log.Debugf("installSyslinux(%s)", device)
-		cmd := exec.Command("dd", "bs=440", "count=1", "if=/usr/share/syslinux/"+mbrFile, "of="+device)
-		log.Debugf("Run(%v)", cmd)
-		if err := cmd.Run(); err != nil {
-			log.Errorf("dd: %s", err)
-			return err
-		}
-	}
-
-	sysLinuxDir := filepath.Join(baseName, config.BootDir, "syslinux")
-	if err := os.MkdirAll(sysLinuxDir, 0755); err != nil {
-		log.Errorf("MkdirAll(%s)): %s", sysLinuxDir, err)
-		//return err
-	}
-
-	//cp /usr/lib/syslinux/modules/bios/* ${baseName}/${bootDir}syslinux
-	files, _ := ioutil.ReadDir("/usr/share/syslinux/")
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		if err := dfs.CopyFile(filepath.Join("/usr/share/syslinux/", file.Name()), sysLinuxDir, file.Name()); err != nil {
-			log.Errorf("copy syslinux: %s", err)
-			return err
-		}
-	}
-
-	//extlinux --install ${baseName}/${bootDir}syslinux
-	cmd := exec.Command("extlinux", "--install", sysLinuxDir)
-	if device == "/dev/" {
-		//extlinux --install --raid ${baseName}/${bootDir}syslinux
-		cmd = exec.Command("extlinux", "--install", "--raid", sysLinuxDir)
-	}
-	//cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	log.Debugf("Run(%v)", cmd)
-	if err := cmd.Run(); err != nil {
-		log.Errorf("extlinux: %s", err)
-		return err
-	}
 	return nil
 }
 
