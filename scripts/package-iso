@@ -5,6 +5,7 @@ set -x
 source $(dirname $0)/version
 cd $(dirname $0)/..
 
+ASSETS=$(pwd)/assets
 ARTIFACTS=$(pwd)/dist/artifacts
 CD=${BUILD}/cd
 rm -rf ${CD}/
@@ -35,15 +36,15 @@ gzip ${CD}/rancheros/installer.tar
 
 # Prepare a FAT filesystem image and populate it with the
 # EFI boot files....
-cd ${DIST}
+cd ${CD}
 dd if=/dev/zero of=refind.img bs=1024 count=5120
 mkdosfs -n "ESP" refind.img
-mcopy -irefind.img -s ${CD}/EFI ../assets/shellx64.efi ::/
+mcopy -irefind.img -s EFI ${ASSETS}/shellx64.efi ::/
 
 # Make the ISO-9660 image file....
-cd ${CD} && mkisofs -V "BurmillaOS" \
+mkisofs -V "BurmillaOS" \
     -J -r -v -o $ISO \
-    -eltorito-alt-boot -efi-boot ${DIST}/refind.img \
+    -eltorito-alt-boot -efi-boot refind.img \
     -no-emul-boot .
 
 cd $(dirname $ISO)
