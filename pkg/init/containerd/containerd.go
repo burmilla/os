@@ -1,4 +1,4 @@
-package docker
+package containerd
 
 import (
 	"syscall"
@@ -13,7 +13,7 @@ func Start(cfg *config.CloudConfig) (chan interface{}, error) {
 	launchConfig.LogFile = ""
 	launchConfig.NoLog = true
 
-	cmd, err := dfs.LaunchDocker(launchConfig, config.SystemDockerBin, args...)
+	cmd, err := dfs.LaunchContainerd(launchConfig, config.SystemContainerdBin, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func GetLaunchConfig(cfg *config.CloudConfig, dockerCfg *config.DockerConfig) (*
 	launchConfig.Environment = dockerCfg.Environment
 
 	if !cfg.Rancher.Debug {
-		launchConfig.LogFile = cfg.Rancher.Defaults.SystemDockerLogs
+		launchConfig.LogFile = cfg.Rancher.Defaults.SystemContainerdLogs
 	}
 
 	return &launchConfig, args

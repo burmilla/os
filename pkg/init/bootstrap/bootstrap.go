@@ -3,7 +3,7 @@ package bootstrap
 import (
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/compose"
-	"github.com/burmilla/os/pkg/init/docker"
+	"github.com/burmilla/os/pkg/init/containerd"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/sysinit"
 	"github.com/burmilla/os/pkg/util"
@@ -23,12 +23,12 @@ func bootstrapServices(cfg *config.CloudConfig) (*config.CloudConfig, error) {
 func Bootstrap(cfg *config.CloudConfig) error {
 	log.Info("Launching Bootstrap Docker")
 
-	c, err := docker.Start(cfg)
+	c, err := containerd.Start(cfg)
 	if err != nil {
 		return err
 	}
 
-	defer docker.Stop(c)
+	defer containerd.Stop(c)
 
 	_, err = config.ChainCfgFuncs(cfg,
 		[]config.CfgFuncData{

@@ -223,8 +223,9 @@ func getPid(service string, project *project.Project) (int, error) {
 		return 0, nil
 	}
 
+	// This need to migrate to nerdctl, etc
 	client, err := composeClient.Create(composeClient.Options{
-		Host: config.SystemDockerHost,
+		Host: config.SystemContainerdHost,
 	})
 	if err != nil {
 		return 0, err

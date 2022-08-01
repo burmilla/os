@@ -13,20 +13,20 @@ import (
 )
 
 const (
-	OemDir           = "/usr/share/ros/oem"
-	BootDir          = "/boot"
-	StateDir         = "/state"
-	RosBin           = "/usr/bin/ros"
-	SysInitBin       = "/usr/bin/ros-sysinit"
-	SystemDockerHost = "unix:///var/run/system-docker.sock"
-	DockerHost       = "unix:///var/run/docker.sock"
-	ImagesPath       = "/usr/share/ros"
-	InitImages       = "images-init.tar"
-	SystemImages     = "images-system.tar"
-	UserImages       = "images-user.tar"
-	Debug            = false
-	SystemDockerBin  = "/usr/bin/system-dockerd"
-	DefaultDind      = "burmilla/os-dind:17.12.1"
+	OemDir               = "/usr/share/ros/oem"
+	BootDir              = "/boot"
+	StateDir             = "/state"
+	RosBin               = "/usr/bin/ros"
+	SysInitBin           = "/usr/bin/ros-sysinit"
+	SystemContainerdHost = "unix:///var/run/system-containerd.sock"
+	DockerHost           = "unix:///var/run/docker.sock"
+	ImagesPath           = "/usr/share/ros"
+	InitImages           = "images-init.tar"
+	SystemImages         = "images-system.tar"
+	UserImages           = "images-user.tar"
+	Debug                = false
+	SystemContainerdBin  = "/usr/bin/containerd"
+	DefaultDind          = "burmilla/os-dind:17.12.1"
 
 	DetachLabel        = "io.rancher.os.detach"
 	CreateOnlyLabel    = "io.rancher.os.createonly"
@@ -142,7 +142,7 @@ type RancherConfig struct {
 	Repositories        Repositories                              `yaml:"repositories,omitempty"`
 	SSH                 SSHConfig                                 `yaml:"ssh,omitempty"`
 	State               StateConfig                               `yaml:"state,omitempty"`
-	SystemDocker        DockerConfig                              `yaml:"system_docker,omitempty"`
+	SystemContainerd    DockerConfig                              `yaml:"system_docker,omitempty"`
 	Upgrade             UpgradeConfig                             `yaml:"upgrade,omitempty"`
 	Docker              DockerConfig                              `yaml:"docker,omitempty"`
 	RegistryAuths       map[string]types.AuthConfig               `yaml:"registry_auths,omitempty"`
@@ -231,10 +231,10 @@ type CloudInit struct {
 }
 
 type Defaults struct {
-	Hostname         string                `yaml:"hostname,omitempty"`
-	Docker           DockerConfig          `yaml:"docker,omitempty"`
-	Network          netconf.NetworkConfig `yaml:"network,omitempty"`
-	SystemDockerLogs string                `yaml:"system_docker_logs,omitempty"`
+	Hostname             string                `yaml:"hostname,omitempty"`
+	Docker               DockerConfig          `yaml:"docker,omitempty"`
+	Network              netconf.NetworkConfig `yaml:"network,omitempty"`
+	SystemContainerdLogs string                `yaml:"system_docker_logs,omitempty"`
 }
 
 func (r Repositories) ToArray() []string {

@@ -11,8 +11,8 @@ import (
 	"github.com/burmilla/os/pkg/init/b2d"
 	"github.com/burmilla/os/pkg/init/cloudinit"
 	"github.com/burmilla/os/pkg/init/configfiles"
+	"github.com/burmilla/os/pkg/init/containerd"
 	"github.com/burmilla/os/pkg/init/debug"
-	"github.com/burmilla/os/pkg/init/docker"
 	"github.com/burmilla/os/pkg/init/env"
 	"github.com/burmilla/os/pkg/init/fsmount"
 	"github.com/burmilla/os/pkg/init/hypervisor"
@@ -74,18 +74,21 @@ func RunInit() error {
 		recovery.Recovery(err)
 	}
 
-	launchConfig, args := docker.GetLaunchConfig(cfg, &cfg.Rancher.SystemDocker)
-	launchConfig.Fork = !cfg.Rancher.SystemDocker.Exec
+	launchConfig, args := containerd.GetLaunchConfig(cfg, &cfg.Rancher.SystemContainerd)
+	launchConfig.Fork = !cfg.Rancher.SystemContainerd.Exec
 	//launchConfig.NoLog = true
 
-	log.Info("Launching System Docker")
-	_, err = dfs.LaunchDocker(launchConfig, config.SystemDockerBin, args...)
+	// FixMe: We need build logic to parse containerd parameters here
+	args = []string{}
+
+	log.Info("Launching Containerd")
+	_, err = dfs.LaunchContainerd(launchConfig, config.SystemContainerdBin, args...)
 	if err != nil {
-		log.Errorf("Error Launching System Docker: %s", err)
+		log.Errorf("Error Launching Containerd: %s", err)
 		recovery.Recovery(err)
 		return err
 	}
-	// Code never gets here - rancher.system_docker.exec=true
+	// Code never gets here - rancher.system_containerd.exec=true
 
 	return one.PidOne()
 }

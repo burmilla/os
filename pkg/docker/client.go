@@ -8,7 +8,7 @@ import (
 )
 
 func NewSystemClient() (dockerClient.APIClient, error) {
-	return NewClient(config.SystemDockerHost)
+	return NewClient(config.SystemContainerdHost)
 }
 
 func NewDefaultClient() (dockerClient.APIClient, error) {

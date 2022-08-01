@@ -697,7 +697,7 @@ func runOrExec(config *Config, docker string, args ...string) (*exec.Cmd, error)
 	return execDocker(config, docker, cmd, args)
 }
 
-func LaunchDocker(config *Config, docker string, args ...string) (*exec.Cmd, error) {
+func LaunchContainerd(config *Config, docker string, args ...string) (*exec.Cmd, error) {
 	if err := PrepareFs(config); err != nil {
 		return nil, err
 	}
@@ -730,7 +730,7 @@ func Main() {
 
 	log.Debugf("Launch config %#v", config)
 
-	_, err := LaunchDocker(&config, os.Args[1], args...)
+	_, err := LaunchContainerd(&config, os.Args[1], args...)
 	if err != nil {
 		log.Fatal(err)
 	}

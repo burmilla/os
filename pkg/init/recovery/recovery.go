@@ -3,7 +3,7 @@ package recovery
 import (
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/compose"
-	"github.com/burmilla/os/pkg/init/docker"
+	"github.com/burmilla/os/pkg/init/containerd"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/netconf"
 	"github.com/burmilla/os/pkg/sysinit"
@@ -77,12 +77,12 @@ func Recovery(initFailure error) {
 			Restart:       &[]bool{false}[0],
 			Graph:         "/var/lib/recovery-docker",
 			Group:         "root",
-			Host:          []string{"unix:///var/run/system-docker.sock"},
+			Host:          []string{"unix:///var/run/system-containerd.sock"},
 			UserlandProxy: &[]bool{false}[0],
 		},
 	}
 
-	_, err := docker.Start(&recoveryConfig)
+	_, err := containerd.Start(&recoveryConfig)
 	if err != nil {
 		log.Fatal(err)
 	}

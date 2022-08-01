@@ -7,7 +7,7 @@ import (
 
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/compose"
-	"github.com/burmilla/os/pkg/init/docker"
+	"github.com/burmilla/os/pkg/init/containerd"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/sysinit"
 	"github.com/burmilla/os/pkg/util"
@@ -104,12 +104,12 @@ func CloudInit(cfg *config.CloudConfig) (*config.CloudConfig, error) {
 }
 
 func runCloudInitServices(cfg *config.CloudConfig) error {
-	c, err := docker.Start(cfg)
+	c, err := containerd.Start(cfg)
 	if err != nil {
 		return err
 	}
 
-	defer docker.Stop(c)
+	defer containerd.Stop(c)
 
 	_, err = config.ChainCfgFuncs(cfg,
 		[]config.CfgFuncData{

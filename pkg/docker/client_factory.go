@@ -26,7 +26,7 @@ func NewClientFactory(opts composeClient.Options) (project.ClientFactory, error)
 	systemOpts := opts
 
 	userOpts.Host = config.DockerHost
-	systemOpts.Host = config.SystemDockerHost
+	systemOpts.Host = config.SystemContainerdHost
 
 	userClient, err := composeClient.Create(userOpts)
 	if err != nil {
@@ -46,7 +46,7 @@ func NewClientFactory(opts composeClient.Options) (project.ClientFactory, error)
 
 func (c *ClientFactory) Create(service project.Service) dockerclient.APIClient {
 	if IsSystemContainer(service.Config()) {
-		waitFor(&c.systemOnce, c.systemClient, config.SystemDockerHost)
+		waitFor(&c.systemOnce, c.systemClient, config.SystemContainerdHost)
 		return c.systemClient
 	}
 
