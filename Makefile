@@ -49,7 +49,7 @@ rpi64: .dapper
 vmware: .dapper
 	mkdir -p dist
 	OS_FIRMWARE="false" \
-	APPEND_SYSTEM_IMAGES="burmilla/os-openvmtools:11.2.0-5" \
+	APPEND_SYSTEM_IMAGES="burmilla/os-openvmtools:12.1.5-1" \
 	./.dapper release-vmware
 
 hyperv: .dapper
