@@ -292,7 +292,7 @@ rancher:
       volumes:
       - /usr/bin/iptables:/sbin/iptables:ro
       restart: always
-      mem_limit: 20971520
+      mem_limit: 104857600
     ntp:
       image: {{.OS_REPO}}/os-base:{{.VERSION}}{{.SUFFIX}}
       command: /bin/start_ntp.sh
