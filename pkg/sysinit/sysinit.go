@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/burmilla/os/cmd/control"
 	"github.com/burmilla/os/config"
@@ -16,7 +17,6 @@ import (
 	"github.com/burmilla/os/pkg/docker"
 	"github.com/burmilla/os/pkg/log"
 
-	"github.com/docker/engine-api/types"
 	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
 )
@@ -63,20 +63,19 @@ func LoadSystemImages(cfg *config.CloudConfig) (*config.CloudConfig, error) {
 func loadImages(cfg *config.CloudConfig, bootstrap bool) (*config.CloudConfig, error) {
 	archive := getImagesArchive(bootstrap)
 
-	client, err := docker.NewSystemClient()
-	if err != nil {
-		return cfg, err
-	}
-
 	if !hasImage(filepath.Base(archive)) {
 		if _, err := os.Stat(archive); os.IsNotExist(err) {
 			log.Fatalf("FATAL: Could not load images from %s (file not found)", archive)
 		}
 
+		// FixMe: Figure out better logic than just random sleep time
+		log.Infof("Waiting 30 seconds before start loading images to containerd")
+		time.Sleep(30 * time.Second)
+
 		// client.ImageLoad is an asynchronous operation
 		// To ensure the order of execution, use cmd instead of it
 		log.Infof("Loading images from %s", archive)
-		cmd := exec.Command("/usr/bin/system-docker", "load", "-q", "-i", archive)
+		cmd := exec.Command("/usr/bin/system-docker", "load", "--quiet", "-i", archive)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			log.Fatalf("FATAL: Error loading images from %s (%v)\n%s ", archive, err, out)
 		}
@@ -84,10 +83,9 @@ func loadImages(cfg *config.CloudConfig, bootstrap bool) (*config.CloudConfig, e
 		log.Infof("Done loading images from %s", archive)
 	}
 
-	dockerImages, _ := client.ImageList(context.Background(), types.ImageListOptions{})
-	for _, dimg := range dockerImages {
-		log.Debugf("Loaded a docker image: %s", dimg.RepoTags)
-	}
+	cmd := exec.Command("/usr/bin/system-docker", "images", "--format", "{{.Repository}}:{{.Tag}}")
+	out, _ := cmd.CombinedOutput()
+	log.Debugf("Loaded a docker image: %s", out)
 
 	return cfg, nil
 }
