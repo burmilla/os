@@ -4,10 +4,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/network"
 	"github.com/docker/engine-api/types/registry"
-	"github.com/docker/go-connections/nat"
 )
 
 // ContainerCreateResponse contains the information returned to a client on the

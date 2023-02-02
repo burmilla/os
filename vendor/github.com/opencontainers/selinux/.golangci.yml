@@ -1,0 +1,36 @@
+---
+run:
+  concurrency: 6
+  deadline: 5m
+linters:
+  enable:
+    - dupword       # Detects duplicate words.
+    - errorlint     # Detects code that may cause problems with Go 1.13 error wrapping.
+    - exportloopref # Detects pointers to enclosing loop variables.
+    - gocritic      # Metalinter; detects bugs, performance, and styling issues.
+    - gofumpt       # Detects whether code was gofumpt-ed.
+    - gosec         # Detects security problems.
+    - misspell      # Detects commonly misspelled English words in comments.
+    - nilerr        # Detects code that returns nil even if it checks that the error is not nil.
+    - nolintlint    # Detects ill-formed or insufficient nolint directives.
+    - prealloc      # Detects slice declarations that could potentially be pre-allocated.
+    - predeclared   # Detects code that shadows one of Go's predeclared identifiers
+    - revive        # Metalinter; drop-in replacement for golint.
+    - tenv          # Detects using os.Setenv instead of t.Setenv.
+    - thelper       # Detects test helpers without t.Helper().
+    - tparallel     # Detects inappropriate usage of t.Parallel().
+    - unconvert     # Detects unnecessary type conversions.
+linters-settings:
+  govet:
+    check-shadowing: true
+    enable-all: true
+    settings:
+      shadow:
+        strict: true
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-rules:
+    - text: '^shadow: declaration of "err" shadows declaration'
+      linters:
+        - govet

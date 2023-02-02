@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/docker/opts"
 	flag "github.com/docker/docker/pkg/mflag"
 	"github.com/docker/docker/pkg/mount"
@@ -17,7 +18,6 @@ import (
 	"github.com/docker/engine-api/types/container"
 	networktypes "github.com/docker/engine-api/types/network"
 	"github.com/docker/engine-api/types/strslice"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 )
 
@@ -658,7 +658,9 @@ func ValidDeviceMode(mode string) bool {
 
 // ValidateDevice validates a path for devices
 // It will make sure 'val' is in the form:
-//    [host-dir:]container-path[:mode]
+//
+//	[host-dir:]container-path[:mode]
+//
 // It also validates the device mode.
 func ValidateDevice(val string) (string, error) {
 	return validatePath(val, ValidDeviceMode)

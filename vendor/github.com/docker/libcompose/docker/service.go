@@ -8,8 +8,8 @@ import (
 	"github.com/docker/engine-api/types/network"
 	"golang.org/x/net/context"
 
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/engine-api/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/docker/builder"
 	"github.com/docker/libcompose/labels"

@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/docker/pkg/promise"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
@@ -16,7 +17,6 @@ import (
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/network"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/labels"
 	"github.com/docker/libcompose/logger"

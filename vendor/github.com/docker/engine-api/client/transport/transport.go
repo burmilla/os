@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/docker/go-connections/sockets"
+	"github.com/burmilla/go-connections-old/sockets"
 )
 
 // apiTransport holds information about the http transport to connect with the API.

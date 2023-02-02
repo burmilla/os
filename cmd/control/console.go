@@ -18,6 +18,9 @@ import (
 	composeConfig "github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
+
+	"github.com/containerd/nerdctl/pkg/composer"
+	"github.com/containerd/nerdctl/pkg/composer/serviceparser"
 )
 
 func consoleSubcommands() []cli.Command {
@@ -82,6 +85,12 @@ func consoleSwitch(c *cli.Context) error {
 		if err := compose.StageServices(cfg, newConsole); err != nil {
 			return err
 		}
+	}
+
+	var parsedServices []*serviceparser.Service
+	var uo composer.UpOptions
+	if err := composer.upServices(context.Background(), parsedServices, uo); err != nil {
+		return err
 	}
 
 	service, err := compose.CreateService(nil, "switch-console", &composeConfig.ServiceConfigV1{

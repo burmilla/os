@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/xeipuuv/gojsonschema"
+	"github.com/burmilla/gojsonschema-old"
 )
 
 func serviceNameFromErrorField(field string) string {

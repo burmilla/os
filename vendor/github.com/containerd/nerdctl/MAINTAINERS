@@ -1,0 +1,18 @@
+# nerdctl maintainers
+#
+# As a containerd sub-project, containerd maintainers are also included from https://github.com/containerd/project/blob/main/MAINTAINERS.
+# See https://github.com/containerd/project/blob/main/GOVERNANCE.md for description of maintainer role
+#
+# COMMITTERS
+# GitHub ID, Name, Email address
+"ktock","Kohei Tokunaga","ktokunaga.mail@gmail.com"
+"fahedouch","Fahed Dorgaa","fahed.dorgaa@gmail.com"
+"Zheaoli", "Zheao Li", "me@manjusaka.me"
+"junnplus","Ye Sijun","junnplus@gmail.com"
+
+# REVIEWERS
+# GitHub ID, Name, Email address
+"jsturtevant","James Sturtevant","jstur@microsoft.com"
+"yuchanns", "Hanchin Hsieh", "me@yuchanns.xyz"
+"manugupt1", "Manu Gupta", "manugupt1@gmail.com"
+"djdongjin", "Jin Dong", "jindon@amazon.com"

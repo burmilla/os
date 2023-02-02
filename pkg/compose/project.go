@@ -64,6 +64,8 @@ func GetProject(cfg *config.CloudConfig, networkingAvailable, loadConsole bool) 
 }
 
 func newProject(name string, cfg *config.CloudConfig, environmentLookup composeConfig.EnvironmentLookup, authLookup *rosDocker.ConfigAuthLookup) (*project.Project, error) {
+
+	// TODO: Continue from here...
 	clientFactory, err := rosDocker.NewClientFactory(composeClient.Options{})
 	if err != nil {
 		return nil, err

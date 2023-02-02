@@ -11,11 +11,11 @@
 [Org]
 	[Org."Core maintainers"]
 		people = [
-			"aboch",
-			"LK4D4",
-			"icecrime",
-			"mrjana",
+			"arkodg",
+			"euanh",
+			"fcrisciani",
 			"mavenugo",
+			"selansen",
 		]
 
 [people]
@@ -26,27 +26,27 @@
 
 	# ADD YOURSELF HERE IN ALPHABETICAL ORDER
 
-	[people.aboch]
-	Name = "Alessandro Boch"
-	Email = "aboch@docker.com"
-	GitHub = "aboch"
+	[people.arkodg]
+	Name = "Arko Dasgupta"
+	Email = "arko.dasgupta@docker.com"
+	GitHub = "arkodg"
 
-	[people.LK4D4]
-	Name = "Alexandr Morozov"
-	Email = "lk4d4@docker.com"
-	GitHub = "LK4D4"
+	[people.euanh]
+	Name = "Euan Harris"
+	Email = "euan.harris@docker.com"
+	GitHub = "euanh"
 
-	[people.icecrime]
-	Name = "Arnaud Porterie"
-	Email = "arnaud@docker.com"
-	GitHub = "icecrime"
-
-	[people.mrjana]
-	Name = "Jana Radhakrishnan"
-	Email = "mrjana@docker.com"
-	GitHub = "mrjana"
+	[people.fcrisciani]
+	Name = "Flavio Crisciani"
+	Email = "flavio.crisciani@docker.com"
+	GitHub = "fcrisciani"
 
 	[people.mavenugo]
 	Name = "Madhu Venugopal"
 	Email = "madhu@docker.com"
 	GitHub = "mavenugo"
+
+	[people.selansen]
+	Name = "Elangovan Sivanandam"
+	Email = "elango.siva@docker.com"
+	GitHub = "selansen"

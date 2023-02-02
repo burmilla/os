@@ -4,7 +4,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/docker/go-connections/tlsconfig"
+	"github.com/burmilla/go-connections-old/tlsconfig"
 )
 
 func (s *Service) lookupV2Endpoints(hostname string) (endpoints []APIEndpoint, err error) {

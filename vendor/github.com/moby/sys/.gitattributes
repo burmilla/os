@@ -1,0 +1,6 @@
+# Default
+* text=auto
+
+# Go files should always have UNIX-style line endings
+# (see e.g. https://github.com/golang/go/issues/16355)
+*.go	text eol=lf

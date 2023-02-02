@@ -1,0 +1,131 @@
+linters:
+  enable:
+    - bodyclose
+    - depguard
+    - dogsled
+    - gocyclo
+    - gofumpt
+    - goimports
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - megacheck
+    - misspell
+    - nakedret
+    - revive
+    - staticcheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+
+  disable:
+    - errcheck
+
+run:
+  timeout: 5m
+  skip-files:
+    - cli/compose/schema/bindata.go
+    - .*generated.*
+
+linters-settings:
+  depguard:
+    list-type: blacklist
+    include-go-root: true
+    packages:
+      # The io/ioutil package has been deprecated.
+      # https://go.dev/doc/go1.16#ioutil
+      - io/ioutil
+  gocyclo:
+    min-complexity: 16
+  govet:
+    check-shadowing: false
+  lll:
+    line-length: 200
+  nakedret:
+    command: nakedret
+    pattern: ^(?P<path>.*?\\.go):(?P<line>\\d+)\\s*(?P<message>.*)$
+
+issues:
+  # The default exclusion rules are a bit too permissive, so copying the relevant ones below
+  exclude-use-default: false
+
+  exclude:
+    - parameter .* always receives
+
+  exclude-rules:
+    # We prefer to use an "exclude-list" so that new "default" exclusions are not
+    # automatically inherited. We can decide whether or not to follow upstream
+    # defaults when updating golang-ci-lint versions.
+    # Unfortunately, this means we have to copy the whole exclusion pattern, as
+    # (unlike the "include" option), the "exclude" option does not take exclusion
+    # ID's.
+    #
+    # These exclusion patterns are copied from the default excluses at:
+    # https://github.com/golangci/golangci-lint/blob/v1.44.0/pkg/config/issues.go#L10-L104
+
+    # EXC0001
+    - text: "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*print(f|ln)?|os\\.(Un)?Setenv). is not checked"
+      linters:
+        - errcheck
+    # EXC0003
+    - text: "func name will be used as test\\.Test.* by other packages, and that stutters; consider calling this"
+      linters:
+        - revive
+    # EXC0006
+    - text: "Use of unsafe calls should be audited"
+      linters:
+        - gosec
+    # EXC0007
+    - text: "Subprocess launch(ed with variable|ing should be audited)"
+      linters:
+        - gosec
+    # EXC0008
+    # TODO: evaluate these and fix where needed: G307: Deferring unsafe method "*os.File" on type "Close" (gosec)
+    - text: "(G104|G307)"
+      linters:
+        - gosec
+    # EXC0009
+    - text: "(Expect directory permissions to be 0750 or less|Expect file permissions to be 0600 or less)"
+      linters:
+        - gosec
+    # EXC0010
+    - text: "Potential file inclusion via variable"
+      linters:
+        - gosec
+
+    # G113 Potential uncontrolled memory consumption in Rat.SetString (CVE-2022-23772)
+    # only affects gp < 1.16.14. and go < 1.17.7
+    - text: "(G113)"
+      linters:
+        - gosec
+
+    # Looks like the match in "EXC0007" above doesn't catch this one
+    # TODO: consider upstreaming this to golangci-lint's default exclusion rules
+    - text: "G204: Subprocess launched with a potential tainted input or cmd arguments"
+      linters:
+        - gosec
+    # Looks like the match in "EXC0009" above doesn't catch this one
+    # TODO: consider upstreaming this to golangci-lint's default exclusion rules
+    - text: "G306: Expect WriteFile permissions to be 0600 or less"
+      linters:
+        - gosec
+
+    # TODO: make sure all packages have a description. Currently, there's 67 packages without.
+    - text: "package-comments: should have a package comment"
+      linters:
+        - revive
+
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec
+
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0

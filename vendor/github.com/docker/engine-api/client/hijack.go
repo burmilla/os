@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/burmilla/go-connections-old/sockets"
 	"github.com/docker/engine-api/types"
-	"github.com/docker/go-connections/sockets"
 	"golang.org/x/net/context"
 )
 

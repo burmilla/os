@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/burmilla/go-connections-old/sockets"
+	"github.com/burmilla/go-connections-old/tlsconfig"
 	"github.com/docker/docker/cliconfig"
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/docker/engine-api/client"
-	"github.com/docker/go-connections/sockets"
-	"github.com/docker/go-connections/tlsconfig"
 	"github.com/docker/libcompose/version"
 )
 

@@ -1,10 +1,12 @@
+arch:
+  - amd64
+  
 language: go
 go_import_path: github.com/pkg/errors
 go:
-  - 1.4.3
-  - 1.5.4
-  - 1.6.2
+  - 1.14
+  - 1.15
   - tip
 
 script:
-  - go test -v ./...
+  - make check

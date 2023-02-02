@@ -1,8 +1,8 @@
 package container
 
 import (
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/engine-api/types/strslice"
-	"github.com/docker/go-connections/nat"
 )
 
 // Config contains the configuration data about a container.

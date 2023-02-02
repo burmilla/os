@@ -3,7 +3,7 @@ package registry
 import (
 	"net/url"
 
-	"github.com/docker/go-connections/tlsconfig"
+	"github.com/burmilla/go-connections-old/tlsconfig"
 )
 
 func (s *Service) lookupV1Endpoints(hostname string) (endpoints []APIEndpoint, err error) {

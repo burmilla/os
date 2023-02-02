@@ -1,6 +1,7 @@
 # tar-split
 
 [![Build Status](https://travis-ci.org/vbatts/tar-split.svg?branch=master)](https://travis-ci.org/vbatts/tar-split)
+[![Go Report Card](https://goreportcard.com/badge/github.com/vbatts/tar-split)](https://goreportcard.com/report/github.com/vbatts/tar-split)
 
 Pristinely disassembling a tar archive, and stashing needed raw bytes and offsets to reassemble a validating original archive.
 
@@ -39,7 +40,7 @@ This demonstrates the `tar-split` command and how to assemble a tar archive from
 
 This demonstrates the tar-split integration for docker-1.8. Providing consistent tar archives for the image layer content.
 
-![docker tar-split demo](https://www.youtube.com/upload_thumbnail?v=tV_Dia8E8xw&t=2&ts=1445028436275)
+![docker tar-split demo](https://i.ytimg.com/vi_webp/vh5wyjIOBtc/default.webp)
 [youtube vide of docker layer checksums](https://youtu.be/tV_Dia8E8xw)
 
 ## Caveat
@@ -50,7 +51,7 @@ For example stored sparse files that have "holes" in them, will be read as a
 contiguous file, though the archive contents may be recorded in sparse format.
 Therefore when adding the file payload to a reassembled tar, to achieve
 identical output, the file payload would need be precisely re-sparsified. This
-is not something I seek to fix imediately, but would rather have an alert that
+is not something I seek to fix immediately, but would rather have an alert that
 precise reassembly is not possible.
 (see more http://www.gnu.org/software/tar/manual/html_node/Sparse-Formats.html)
 
@@ -66,7 +67,7 @@ Do not break the API of stdlib `archive/tar` in our fork (ideally find an upstre
 
 ## Std Version
 
-The version of golang stdlib `archive/tar` is from go1.4.1, and their master branch around [a9dddb53f](https://github.com/golang/go/tree/a9dddb53f).
+The version of golang stdlib `archive/tar` is from go1.11
 It is minimally extended to expose the raw bytes of the TAR, rather than just the marshalled headers and file stream.
 
 
@@ -134,4 +135,3 @@ bytes-per-file rate for the storage implications.
 ## License
 
 See [LICENSE](LICENSE)
-

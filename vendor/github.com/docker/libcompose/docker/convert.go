@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/docker/runconfig/opts"
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/network"
 	"github.com/docker/engine-api/types/strslice"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/project"

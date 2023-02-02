@@ -3,9 +3,9 @@ package container
 import (
 	"strings"
 
+	"github.com/burmilla/go-connections-old/nat"
 	"github.com/docker/engine-api/types/blkiodev"
 	"github.com/docker/engine-api/types/strslice"
-	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 )
 

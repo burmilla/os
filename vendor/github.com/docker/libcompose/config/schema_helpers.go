@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/docker/go-connections/nat"
-	"github.com/xeipuuv/gojsonschema"
+	"github.com/burmilla/go-connections-old/nat"
+	"github.com/burmilla/gojsonschema-old"
 )
 
 var (

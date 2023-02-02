@@ -10,8 +10,48 @@ import (
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/docker/libnetwork/resolvconf/dns"
+	"github.com/docker/libnetwork/types"
 	"github.com/sirupsen/logrus"
 )
+
+const (
+	// defaultPath is the default path to the resolv.conf that contains information to resolve DNS. See Path().
+	defaultPath = "/etc/resolv.conf"
+	// alternatePath is a path different from defaultPath, that may be used to resolve DNS. See Path().
+	alternatePath = "/run/systemd/resolve/resolv.conf"
+)
+
+var (
+	detectSystemdResolvConfOnce sync.Once
+	pathAfterSystemdDetection   = defaultPath
+)
+
+// Path returns the path to the resolv.conf file that libnetwork should use.
+//
+// When /etc/resolv.conf contains 127.0.0.53 as the only nameserver, then
+// it is assumed systemd-resolved manages DNS. Because inside the container 127.0.0.53
+// is not a valid DNS server, Path() returns /run/systemd/resolve/resolv.conf
+// which is the resolv.conf that systemd-resolved generates and manages.
+// Otherwise Path() returns /etc/resolv.conf.
+//
+// Errors are silenced as they will inevitably resurface at future open/read calls.
+//
+// More information at https://www.freedesktop.org/software/systemd/man/systemd-resolved.service.html#/etc/resolv.conf
+func Path() string {
+	detectSystemdResolvConfOnce.Do(func() {
+		candidateResolvConf, err := ioutil.ReadFile(defaultPath)
+		if err != nil {
+			// silencing error as it will resurface at next calls trying to read defaultPath
+			return
+		}
+		ns := GetNameservers(candidateResolvConf, types.IP)
+		if len(ns) == 1 && ns[0] == "127.0.0.53" {
+			pathAfterSystemdDetection = alternatePath
+			logrus.Infof("detected 127.0.0.53 nameserver, assuming systemd-resolved, so using resolv.conf: %s", alternatePath)
+		}
+	})
+	return pathAfterSystemdDetection
+}
 
 var (
 	// Note: the default IPv4 & IPv6 resolvers are set to Google's Public DNS
@@ -24,11 +64,13 @@ var (
 	// -- e.g. other link-local types -- either won't work in containers or are unnecessary.
 	// For readability and sufficiency for Docker purposes this seemed more reasonable than a
 	// 1000+ character regexp with exact and complete IPv6 validation
-	ipv6Address = `([0-9A-Fa-f]{0,4}:){2,7}([0-9A-Fa-f]{0,4})`
+	ipv6Address = `([0-9A-Fa-f]{0,4}:){2,7}([0-9A-Fa-f]{0,4})(%\w+)?`
 
 	localhostNSRegexp = regexp.MustCompile(`(?m)^nameserver\s+` + dns.IPLocalhost + `\s*\n*`)
 	nsIPv6Regexp      = regexp.MustCompile(`(?m)^nameserver\s+` + ipv6Address + `\s*\n*`)
 	nsRegexp          = regexp.MustCompile(`^\s*nameserver\s*((` + ipv4Address + `)|(` + ipv6Address + `))\s*$`)
+	nsIPv6Regexpmatch = regexp.MustCompile(`^\s*nameserver\s*((` + ipv6Address + `))\s*$`)
+	nsIPv4Regexpmatch = regexp.MustCompile(`^\s*nameserver\s*((` + ipv4Address + `))\s*$`)
 	searchRegexp      = regexp.MustCompile(`^\s*search\s*(([^\s]+\s*)*)$`)
 	optionsRegexp     = regexp.MustCompile(`^\s*options\s*(([^\s]+\s*)*)$`)
 )
@@ -47,15 +89,7 @@ type File struct {
 
 // Get returns the contents of /etc/resolv.conf and its hash
 func Get() (*File, error) {
-	resolv, err := ioutil.ReadFile("/etc/resolv.conf")
-	if err != nil {
-		return nil, err
-	}
-	hash, err := ioutils.HashData(bytes.NewReader(resolv))
-	if err != nil {
-		return nil, err
-	}
-	return &File{Content: resolv, Hash: hash}, nil
+	return GetSpecific(Path())
 }
 
 // GetSpecific returns the contents of the user specified resolv.conf file and its hash
@@ -78,7 +112,7 @@ func GetIfChanged() (*File, error) {
 	lastModified.Lock()
 	defer lastModified.Unlock()
 
-	resolv, err := ioutil.ReadFile("/etc/resolv.conf")
+	resolv, err := ioutil.ReadFile(Path())
 	if err != nil {
 		return nil, err
 	}
@@ -105,12 +139,11 @@ func GetLastModified() *File {
 }
 
 // FilterResolvDNS cleans up the config in resolvConf.  It has two main jobs:
-// 1. It looks for localhost (127.*|::1) entries in the provided
-//    resolv.conf, removing local nameserver entries, and, if the resulting
-//    cleaned config has no defined nameservers left, adds default DNS entries
-// 2. Given the caller provides the enable/disable state of IPv6, the filter
-//    code will remove all IPv6 nameservers if it is not enabled for containers
-//
+//  1. It looks for localhost (127.*|::1) entries in the provided
+//     resolv.conf, removing local nameserver entries, and, if the resulting
+//     cleaned config has no defined nameservers left, adds default DNS entries
+//  2. Given the caller provides the enable/disable state of IPv6, the filter
+//     code will remove all IPv6 nameservers if it is not enabled for containers
 func FilterResolvDNS(resolvConf []byte, ipv6Enabled bool) (*File, error) {
 	cleanedResolvConf := localhostNSRegexp.ReplaceAll(resolvConf, []byte{})
 	// if IPv6 is not enabled, also clean out any IPv6 address nameserver
@@ -119,11 +152,11 @@ func FilterResolvDNS(resolvConf []byte, ipv6Enabled bool) (*File, error) {
 	}
 	// if the resulting resolvConf has no more nameservers defined, add appropriate
 	// default DNS servers for IPv4 and (optionally) IPv6
-	if len(GetNameservers(cleanedResolvConf)) == 0 {
-		logrus.Infof("No non-localhost DNS nameservers are left in resolv.conf. Using default external servers : %v", defaultIPv4Dns)
+	if len(GetNameservers(cleanedResolvConf, types.IP)) == 0 {
+		logrus.Infof("No non-localhost DNS nameservers are left in resolv.conf. Using default external servers: %v", defaultIPv4Dns)
 		dns := defaultIPv4Dns
 		if ipv6Enabled {
-			logrus.Infof("IPv6 enabled; Adding default IPv6 external servers : %v", defaultIPv6Dns)
+			logrus.Infof("IPv6 enabled; Adding default IPv6 external servers: %v", defaultIPv6Dns)
 			dns = append(dns, defaultIPv6Dns...)
 		}
 		cleanedResolvConf = append(cleanedResolvConf, []byte("\n"+strings.Join(dns, "\n"))...)
@@ -151,10 +184,17 @@ func getLines(input []byte, commentMarker []byte) [][]byte {
 }
 
 // GetNameservers returns nameservers (if any) listed in /etc/resolv.conf
-func GetNameservers(resolvConf []byte) []string {
+func GetNameservers(resolvConf []byte, kind int) []string {
 	nameservers := []string{}
 	for _, line := range getLines(resolvConf, []byte("#")) {
-		var ns = nsRegexp.FindSubmatch(line)
+		var ns [][]byte
+		if kind == types.IP {
+			ns = nsRegexp.FindSubmatch(line)
+		} else if kind == types.IPv4 {
+			ns = nsIPv4Regexpmatch.FindSubmatch(line)
+		} else if kind == types.IPv6 {
+			ns = nsIPv6Regexpmatch.FindSubmatch(line)
+		}
 		if len(ns) > 0 {
 			nameservers = append(nameservers, string(ns[1]))
 		}
@@ -167,8 +207,15 @@ func GetNameservers(resolvConf []byte) []string {
 // This function's output is intended for net.ParseCIDR
 func GetNameserversAsCIDR(resolvConf []byte) []string {
 	nameservers := []string{}
-	for _, nameserver := range GetNameservers(resolvConf) {
-		nameservers = append(nameservers, nameserver+"/32")
+	for _, nameserver := range GetNameservers(resolvConf, types.IP) {
+		var address string
+		// If IPv6, strip zone if present
+		if strings.Contains(nameserver, ":") {
+			address = strings.Split(nameserver, "%")[0] + "/128"
+		} else {
+			address = nameserver + "/32"
+		}
+		nameservers = append(nameservers, address)
 	}
 	return nameservers
 }

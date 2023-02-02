@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/burmilla/go-connections-old/tlsconfig"
 	"github.com/docker/engine-api/client/transport"
-	"github.com/docker/go-connections/tlsconfig"
 )
 
 // Client is the API client that performs all operations
