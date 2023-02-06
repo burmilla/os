@@ -1,0 +1,57 @@
+# Release guide (since v0.9.0):
+# 1. Bump up the version string to `vX.Y.Z` (or `vX.Y.Z-beta.W`) in `pkg/version/version.go`.
+# 2. `git commit -a -s -m vX.Y.Z`
+# 3. Bump up the version string to `vX.Y.Z+dev` (or `vX.Y.Z-beta.W`+dev) in `pkg/version/version.go`.
+# 4. `git commit -a -s -m vX.Y.Z+dev`
+# 5. Open a PR and merge it.
+# 6. Create a tag `v.X.Y.Z` for the `vX.Y.Z` commit, and push the tag to the upstream: `git push upstream vX.Y.Z`
+# 7. GitHub Actions automatically ships a draft release with a statically compiled binary: https://github.com/rootless-containers/rootlesskit/releases
+#    If it fails, check the GitHub Actions log: https://github.com/rootless-containers/rootlesskit/actions?query=workflow%3ARelease
+# 8. Add release notes to the draft release and ship the release.
+name: Release
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: "Build binaries"
+      run: DOCKER_BUILDKIT=1 docker build -o /tmp/artifact --target cross-artifact .
+    - name: "SHA256SUMS"
+      run: (cd /tmp/artifact; sha256sum *) | tee /tmp/SHA256SUMS
+    - name: "The sha256sum of the SHA256SUMS file"
+      run: sha256sum /tmp/SHA256SUMS
+    - name: "Prepare the release note"
+      run: |
+        tag="${GITHUB_REF##*/}"
+        shasha=$(sha256sum /tmp/SHA256SUMS | awk '{print $1}')
+        cat << EOF | tee /tmp/release-note.txt
+        ${tag}
+
+        #### Changes
+        (To be documented)
+
+        #### Install
+        \`\`\`
+        mkdir -p ~/bin
+        curl -sSL https://github.com/${{ github.repository }}/releases/download/${tag}/rootlesskit-\$(uname -m).tar.gz | tar Cxzv ~/bin
+        \`\`\`
+
+        #### About the binaries
+        The binaries were built automatically on GitHub Actions.
+        See the log to verify SHA256SUMS.
+        https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        The sha256sum of the SHA256SUMS file itself is ${shasha} .
+        EOF
+    - name: "Create release"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        tag="${GITHUB_REF##*/}"
+        asset_flags=()
+        for f in /tmp/artifact/* /tmp/SHA256SUMS; do asset_flags+=("-a" "$f"); done
+        hub release create "${asset_flags[@]}" -F /tmp/release-note.txt --draft "${tag}"

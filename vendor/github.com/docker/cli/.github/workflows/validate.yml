@@ -1,0 +1,58 @@
+name: validate
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+      - '[0-9]+.[0-9]{2}'
+    tags:
+      - 'v*'
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - lint
+          - shellcheck
+          - validate-vendor
+          - update-authors # ensure authors update target runs fine
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Run
+        uses: docker/bake-action@v2
+        with:
+          targets: ${{ matrix.target }}
+
+  validate-make:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - yamldocs # ensure yamldocs target runs fine
+          - manpages # ensure manpages target runs fine
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Run
+        shell: 'script --return --quiet --command "bash {0}"'
+        run: |
+          make -f docker.Makefile ${{ matrix.target }}

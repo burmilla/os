@@ -1,0 +1,126 @@
+name: Main
+on: [push, pull_request]
+jobs:
+  test-unit:
+    name: "Unit test"
+    runs-on: ubuntu-latest
+    steps:
+    - name: "Check out"
+      uses: actions/checkout@v3
+    - name: "Build unit test image"
+      run: DOCKER_BUILDKIT=1 docker build -t rootlesskit:test-unit --target test-unit .
+    - name: "Unit test"
+      run: docker run --rm --privileged rootlesskit:test-unit
+  test-cross:
+    name: "Cross compilation test"
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v3
+    - name: "Build binaries"
+      run: DOCKER_BUILDKIT=1 docker build -o /tmp/artifact --target cross-artifact .
+  test-integration:
+    name: "Integration test"
+    runs-on: ubuntu-latest
+    steps:
+    - name: "Check out"
+      uses: actions/checkout@v3
+    - name: "Build integration test image"
+      run: DOCKER_BUILDKIT=1 docker build -t rootlesskit:test-integration --target test-integration .
+    - name: "Integration test: exit-code"
+      run: docker run --rm --privileged rootlesskit:test-integration ./integration-exit-code.sh
+    - name: "Integration test: propagation"
+      run: docker run --rm --privileged rootlesskit:test-integration ./integration-propagation.sh
+    - name: "Integration test: propagation (with `mount --make-rshared /`)"
+      run: docker run --rm --privileged rootlesskit:test-integration sh -exc "sudo mount --make-rshared / && ./integration-propagation.sh"
+    - name: "Integration test: restart"
+      run: docker run --rm --privileged rootlesskit:test-integration ./integration-restart.sh
+    - name: "Integration test: port"
+      # NOTE: "--net=host" is a bad hack to enable IPv6
+      run: docker run --rm --net=host --privileged rootlesskit:test-integration ./integration-port.sh
+    - name: "Integration test: IPv6 routing"
+      run: docker run  --rm --privileged --sysctl net.ipv6.conf.all.disable_ipv6=0 rootlesskit:test-integration ./integration-ipv6.sh
+# ===== Benchmark: Network (MTU=1500) =====
+    - name: "Benchmark: Network (MTU=1500, network driver=slirp4netns)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh slirp4netns 1500
+    - name: "Benchmark: Network (MTU=1500, network driver=slirp4netns with sandbox and seccomp)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh slirp4netns 1500 --slirp4netns-sandbox=auto --slirp4netns-seccomp=auto
+# NOTE: MTU greater than 16424 is known not to work for VPNKit.
+# Also, MTU greather than 4K might not be effective for VPNKit: https://twitter.com/mugofsoup/status/1017665057738641408
+    - name: "Benchmark: Network (MTU=1500, network driver=vpnkit)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh vpnkit 1500
+    - name: "Benchmark: Network (MTU=1500, network driver=lxc-user-nic)"
+      run: |
+          docker run --rm --privileged \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh lxc-user-nic 1500
+    - name: "Benchmark: Network (MTU=1500, rootful veth for comparison)"
+      run: |
+          docker run --rm --privileged \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh rootful_veth 1500
+# ===== Benchmark: Network (MTU=65520) =====
+    - name: "Benchmark: Network (MTU=65520, network driver=slirp4netns)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh slirp4netns 65520
+    - name: "Benchmark: Network (MTU=65520, network driver=slirp4netns with sandbox and seccomp)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh slirp4netns 65520 --slirp4netns-sandbox=auto --slirp4netns-seccomp=auto
+    - name: "Benchmark: Network (MTU=65520, network driver=lxc-user-nic)"
+      run: |
+          docker run --rm --privileged \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh lxc-user-nic 65520
+    - name: "Benchmark: Network (MTU=65520, rootful veth for comparison)"
+      run: |
+          docker run --rm --privileged \
+          rootlesskit:test-integration ./benchmark-iperf3-net.sh rootful_veth 65520
+# ===== Benchmark: TCP Ports =====
+    - name: "Benchmark: TCP Ports (port driver=slirp4netns)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-port.sh slirp4netns
+    - name: "Benchmark: TCP Ports (port driver=builtin)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-port.sh builtin
+# ===== Benchmark: UDP Ports =====
+    - name: "Benchmark: UDP Ports (port driver=builtin)"
+      run: |
+          docker run --rm --security-opt seccomp=unconfined --security-opt apparmor=unconfined --device /dev/net/tun \
+          rootlesskit:test-integration ./benchmark-iperf3-port-udp.sh builtin
+  test-integration-docker:
+    name: "Integration test (Docker)"
+    runs-on: ubuntu-latest
+    steps:
+    - name: "Check out"
+      uses: actions/checkout@v3
+    - name: "Build integration test image"
+      run: DOCKER_BUILDKIT=1 docker build -t rootlesskit:test-integration-docker --target test-integration-docker --build-arg GO_VERSION=1.18 .
+    - name: "Create a custom network to avoid IP confusion"
+      run: docker network create custom
+    - name: "Docker Integration test: net=slirp4netns, port-driver=builtin"
+      run: |
+        docker run -d --name test --network custom --privileged -e DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns -e DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin rootlesskit:test-integration-docker
+        sleep 2
+        docker exec test docker info
+        docker exec test ./integration-docker.sh
+        docker rm -f test
+    - name: "Docker Integration test: net=slirp4netns, port-driver=slirp4netns"
+      run: |
+        docker run -d --name test --network custom --privileged -e DOCKERD_ROOTLESS_ROOTLESSKIT_NET=slirp4netns -e DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=slirp4netns rootlesskit:test-integration-docker
+        sleep 2
+        docker exec test docker info
+        docker exec test ./integration-docker.sh
+        docker rm -f test
+    - name: "Docker Integration test: net=vpnkit, port-driver=builtin"
+      run: |
+        docker run -d --name test --network custom --privileged -e DOCKERD_ROOTLESS_ROOTLESSKIT_NET=vpnkit      -e DOCKERD_ROOTLESS_ROOTLESSKIT_PORT_DRIVER=builtin rootlesskit:test-integration-docker
+        sleep 2
+        docker exec test docker info
+        docker exec test ./integration-docker.sh
+        docker rm -f test

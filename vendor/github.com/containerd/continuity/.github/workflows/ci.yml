@@ -1,0 +1,118 @@
+name: Continuity
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  #
+  # Project checks
+  #
+  project:
+    name: Project Checks
+    runs-on: ubuntu-18.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          path: src/github.com/containerd/continuity
+          fetch-depth: 100
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.17.x
+
+      - uses: containerd/project-checks@v1
+        with:
+          working-directory: src/github.com/containerd/continuity
+
+  tests:
+    name: CI Tests
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    needs: [project]
+
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, macos-10.15, windows-2019]
+
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.17.x
+
+    - name: Git line endings
+      shell: bash
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        path: src/github.com/containerd/continuity
+        fetch-depth: 25
+
+    - name: Dependencies
+      run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.2
+
+    - name: Lint
+      shell: bash
+      run: make lint
+      working-directory: src/github.com/containerd/continuity
+
+    - name: Build
+      shell: bash
+      run: make build binaries
+      working-directory: src/github.com/containerd/continuity
+
+    - name: Linux Tests
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        make test
+        make root-test
+      working-directory: src/github.com/containerd/continuity
+
+    - name: Non-Linux Tests
+      if: ${{ !startsWith(matrix.os, 'ubuntu') }}
+      shell: bash
+      run: make test-compile
+      working-directory: src/github.com/containerd/continuity
+
+  cross:
+    name: Cross-compile
+    runs-on: ubuntu-18.04
+    timeout-minutes: 10
+    needs: [project]
+
+    strategy:
+      matrix:
+        goos: [freebsd, openbsd, netbsd, darwin, solaris]
+
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.17
+
+    - name: Setup Go binary path
+      shell: bash
+      run: |
+        echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+    - name: Check out code
+      uses: actions/checkout@v2
+      with:
+        path: src/github.com/containerd/continuity
+
+    - name: Cross-compile ${{matrix.goos}}
+      shell: bash
+      run: |
+          GOOS=${{matrix.goos}} make build binaries
+      working-directory: src/github.com/containerd/continuity

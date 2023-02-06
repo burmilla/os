@@ -1,0 +1,45 @@
+name: Render and Lint Documentation
+
+on:
+  pull_request:
+    branches_ignore: []
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.17', '1.18', '1.19']
+
+    name: Documentation and Linting
+    steps:
+
+      - uses: actions/checkout@v3
+        with:
+          path: go/src/github.com/opencontainers/image-spec
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Render and Lint
+        env:
+          GOPATH: /home/runner/work/image-spec/image-spec/go
+        run: |
+          export PATH=$GOPATH/bin:$PATH
+          cd go/src/github.com/opencontainers/image-spec
+          make install.tools
+          go get -t -d ./...
+          ls ../
+          make
+          make .gitvalidation
+          make lint
+          make check-license
+          make test
+          make docs
+
+      - name: documentation artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: oci-docs
+          path: go/src/github.com/opencontainers/image-spec/output

@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  #
+  # golangci-lint
+  #
+  linters:
+    name: Linters
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        go-version: [1.17]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.45.0
+          args: --timeout=5m
+          skip-cache: true
+      - name: golangci-lint errors
+        run: golangci-lint run
+        if: ${{ failure() }}
+
+  #
+  # Project checks
+  #
+  project:
+    name: Project Checks
+    runs-on: ubuntu-18.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+
+      - uses: actions/checkout@v3
+        with:
+          path: src/github.com/containerd/ttrpc
+          fetch-depth: 25
+
+      - uses: containerd/project-checks@v1
+        with:
+          working-directory: src/github.com/containerd/ttrpc
+
+  #
+  # Build and Test project
+  #
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.17'
+
+    - name: Check out code
+      uses: actions/checkout@v3
+      with:
+        path: src/github.com/containerd/ttrpc
+        fetch-depth: 25
+
+    - name: Test
+      working-directory: src/github.com/containerd/ttrpc
+      run: |
+        make test
+
+    - name: Coverage
+      working-directory: src/github.com/containerd/ttrpc
+      run: |
+        make coverage TESTFLAGS_RACE=-race
+
+    - name: Integration Tests
+      working-directory: src/github.com/containerd/ttrpc
+      run: |
+        make integration
+
+  #
+  # Run Protobuild
+  #
+  protobuild:
+    name: Run Protobuild
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+
+    - name: Set up Go 1.17
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+      id: go
+
+    - name: Setup Go binary path
+      shell: bash
+      run: |
+        echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+        echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+    - name: Check out code
+      uses: actions/checkout@v3
+      with:
+        path: src/github.com/containerd/ttrpc
+        fetch-depth: 25
+
+    - name: Install dependencies
+      working-directory: src/github.com/containerd/ttrpc
+      run: |
+        sudo make install-protobuf
+        make install-protobuild
+
+    - name: Install protoc-gen-go-ttrpc
+      working-directory: src/github.com/containerd/ttrpc
+      run: |
+        make install
+
+    - name: Run Protobuild
+      working-directory: src/github.com/containerd/ttrpc
+      run: |
+        make check-protos

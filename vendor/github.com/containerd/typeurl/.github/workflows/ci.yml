@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.17.x', '1.18.x']
+
+    name: Typeurl CI
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+
+    - name: Set up Go ${{ matrix.go }}
+      uses: actions/setup-go@v3
+      with:
+        go-version: ${{ matrix.go }}
+
+    - name: Setup Go binary path
+      shell: bash
+      run: |
+        echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+        echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+    - name: Check out code
+      uses: actions/checkout@v3
+      with:
+        path: src/github.com/containerd/typeurl
+        fetch-depth: 25
+
+    - name: Project Checks
+      uses: containerd/project-checks@v1.1.0
+      with:
+        working-directory: src/github.com/containerd/typeurl
+
+    - name: Test
+      working-directory: src/github.com/containerd/typeurl
+      run: |
+        go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+    - name: Codecov
+      run: bash <(curl -s https://codecov.io/bash)
+      working-directory: src/github.com/containerd/typeurl

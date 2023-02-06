@@ -1,0 +1,81 @@
+name: validate
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+
+jobs:
+
+  commit:
+    runs-on: ubuntu-20.04
+    # Only check commits on pull requests.
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: get pr commits
+        id: 'get-pr-commits'
+        uses: tim-actions/get-pr-commits@v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: check subject line length
+        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        with:
+          commits: ${{ steps.get-pr-commits.outputs.commits }}
+          pattern: '^.{0,72}(\n.*)*$'
+          error: 'Subject too long (max 72)'
+
+  lint:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.x
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.50
+
+  cross:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+      - name: cross
+        run: make build-cross
+
+  test-stubs:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.x
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.50
+      - name: test-stubs
+        run: make test
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: [1.17.x, 1.18.x, 1.19.x]
+        race: ["-race", ""]
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: install go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          stable: '!contains(${{ matrix.go-version }}, "beta") && !contains(${{ matrix.go-version }}, "rc")'
+          go-version: ${{ matrix.go-version }}
+
+      - name: build
+        run: make BUILDFLAGS="${{ matrix.race }}" build
+
+      - name: test
+        run: make TESTFLAGS="${{ matrix.race }}" test

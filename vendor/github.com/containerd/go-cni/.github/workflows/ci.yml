@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  checks:
+    name: Project Checks
+    runs-on: ubuntu-18.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.17.x
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - uses: actions/checkout@v3
+        with:
+          path: src/github.com/containerd/go-cni
+          fetch-depth: 25
+
+      - uses: containerd/project-checks@v1
+        with:
+          working-directory: src/github.com/containerd/go-cni
+
+      - uses: containerd/project-checks@v1
+        with:
+          working-directory: src/github.com/containerd/go-cni/integration
+
+  linters:
+    name: Linters
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        go-version: [1.17.x]
+        os: [ubuntu-18.04]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: src/github.com/containerd/go-cni
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.45.2
+          working-directory: src/github.com/containerd/go-cni
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-18.04
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: src/github.com/containerd/go-cni
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.17.x
+
+      - name: Set env
+        shell: bash
+        run: |
+          echo "GOPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/bin" >> $GITHUB_PATH
+
+      - run: |
+          bash -x script/install-cni
+          sudo make clean V=1
+          make test V=1
+          sudo make integration V=1
+        working-directory: src/github.com/containerd/go-cni
