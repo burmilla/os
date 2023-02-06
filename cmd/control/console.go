@@ -16,11 +16,11 @@ import (
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/reference"
 	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
 
+	"github.com/containerd/nerdctl/pkg/clientutil"
+	nerdctlCompose "github.com/containerd/nerdctl/pkg/cmd/compose"
 	"github.com/containerd/nerdctl/pkg/composer"
-	"github.com/containerd/nerdctl/pkg/composer/serviceparser"
 )
 
 func consoleSubcommands() []cli.Command {
@@ -87,12 +87,48 @@ func consoleSwitch(c *cli.Context) error {
 		}
 	}
 
-	var parsedServices []*serviceparser.Service
-	var uo composer.UpOptions
-	if err := composer.upServices(context.Background(), parsedServices, uo); err != nil {
+	/*
+		var parsedServices []*serviceparser.Service
+		var uo composer.UpOptions
+		if err := composer.upServices(context.Background(), parsedServices, uo); err != nil {
+			return err
+		}
+	*/
+	options := composer.Options{
+		Project:          "projectName",
+		ProjectDirectory: "projectDirectory",
+		ConfigPaths:      []string{""},
+		EnvFile:          "envFile",
+		NerdctlCmd:       "nerdctlCmd",
+		NerdctlArgs:      []string{""},
+		DebugPrintFull:   false,
+		Experimental:     false,
+	}
+
+	ctx := context.Background()
+	client, _, cancel, err := clientutil.NewClient(ctx, "burmillaos", "/var/run/docker/containerd/containerd.sock")
+	if err != nil {
+		return err
+	}
+	defer cancel()
+	c, err = nerdctlCompose.New(client, "nil", options, nil, nil)
+	if err != nil {
 		return err
 	}
 
+	uo := composer.UpOptions{
+		Detach:        false,
+		NoBuild:       false,
+		NoColor:       false,
+		NoLogPrefix:   false,
+		ForceBuild:    false,
+		QuietPull:     false,
+		RemoveOrphans: false,
+		Scale:         nil,
+	}
+	c.Up(ctx, uo, nil)
+
+	// Old
 	service, err := compose.CreateService(nil, "switch-console", &composeConfig.ServiceConfigV1{
 		LogDriver:  "json-file",
 		Privileged: true,
