@@ -225,7 +225,7 @@ func runInstall(image, installType, cloudConfig, device, partition, statedir, ka
 			} else {
 				log.Infof("trying to load /bootiso/rancheros/installer.tar.gz")
 				if _, err := os.Stat("/bootiso/rancheros/"); err == nil {
-					cmd := exec.Command("system-docker", "load", "-i", "/bootiso/rancheros/installer.tar.gz")
+					cmd := exec.Command("balena-engine", "load", "-i", "/bootiso/rancheros/installer.tar.gz")
 					cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 					if err := cmd.Run(); err != nil {
 						log.Infof("failed to load images from /bootiso/rancheros: %v", err)
@@ -291,7 +291,7 @@ func runInstall(image, installType, cloudConfig, device, partition, statedir, ka
 			if useIso {
 				util.Unmount("/bootiso")
 			}
-			cmd := exec.Command("system-docker", installerCmd...)
+			cmd := exec.Command("balena-engine", installerCmd...)
 			log.Debugf("Run(%v)", cmd)
 			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 
@@ -689,7 +689,7 @@ func setDiskpartitions(device, diskType string) error {
 			return err
 		}
 
-		cmd := exec.Command("system-docker", "ps", "-q")
+		cmd := exec.Command("balena-engine", "ps", "-q")
 		var outb bytes.Buffer
 		cmd.Stdout = &outb
 		if err := cmd.Run(); err != nil {
@@ -704,7 +704,7 @@ func setDiskpartitions(device, diskType string) error {
 			go func() {
 				// TODO: consider a timeout
 				// TODO:some of these containers don't have cat / shell
-				cmd := exec.Command("system-docker", "exec", image, "cat /proc/mount")
+				cmd := exec.Command("balena-engine", "exec", image, "cat /proc/mount")
 				cmd.Stdout = w
 				if err := cmd.Run(); err != nil {
 					log.Debugf("%s cat %s", image, err)

@@ -177,7 +177,7 @@ func availableConsoles(cfg *config.CloudConfig, update bool) []string {
 func CurrentConsole() (console string) {
 	// TODO: replace this docker container look up with a libcompose service lookup?
 
-	// sudo system-docker inspect --format "{{.Config.Image}}" console
+	// sudo balena-engine inspect --format "{{.Config.Image}}" console
 	client, err := docker.NewSystemClient()
 	if err != nil {
 		log.Warnf("Failed to detect current console: %v", err)

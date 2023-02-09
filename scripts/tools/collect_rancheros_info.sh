@@ -41,7 +41,7 @@ cp -arf $log_src_dir $dest_log_dir
 ros c export -o $dest_conf_dir/ros-config-export.conf
 ros -v > $dest_conf_dir/ros-version
 uname -r > $dest_conf_dir/kernel-version
-system-docker info > $dest_conf_dir/system-docker-info
+balena-engine info > $dest_conf_dir/balena-engine-info
 docker info > $dest_conf_dir/docker-info
 cat /proc/mounts > $dest_conf_dir/proc-mounts
 cat /proc/1/mounts > $dest_conf_dir/proc-1-mounts

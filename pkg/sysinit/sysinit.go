@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	systemImagesPreloadDirectory = "/var/lib/rancher/preload/system-docker"
+	systemImagesPreloadDirectory = "/var/lib/rancher/preload/balena-engine"
 	systemImagesLoadStamp        = "/var/lib/rancher/.sysimages_%s_loaded.done"
 )
 
@@ -76,7 +76,7 @@ func loadImages(cfg *config.CloudConfig, bootstrap bool) (*config.CloudConfig, e
 		// client.ImageLoad is an asynchronous operation
 		// To ensure the order of execution, use cmd instead of it
 		log.Infof("Loading images from %s", archive)
-		cmd := exec.Command("/usr/bin/system-docker", "load", "-q", "-i", archive)
+		cmd := exec.Command("/usr/bin/balena-engine", "load", "-q", "-i", archive)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			log.Fatalf("FATAL: Error loading images from %s (%v)\n%s ", archive, err, out)
 		}

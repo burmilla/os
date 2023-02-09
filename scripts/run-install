@@ -58,7 +58,7 @@ docker run --privileged -it --rm \
     -d ${LOOPBACK} \
     -p ${PARTITION} \
     --append "rancher.autologin=tty1"
-    #-f /cluster/images.tar.xz:var/lib/system-docker/preload/images.tar.xz
+    #-f /cluster/images.tar.xz:var/lib/balena-engine/preload/images.tar.xz
 
 
 sync

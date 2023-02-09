@@ -7,11 +7,11 @@ ros config set rancher.network.interfaces.eth1.dhcp false
 if grep eth2 /proc/net/dev; then
     ros config set rancher.network.interfaces.eth0.dhcp false
     ros config set rancher.network.interfaces.eth2.dhcp true
-    system-docker restart network
+    balena-engine restart network
 fi
 
 for ((i=0;i<30;i++)); do
-    if system-docker pull ${INSTALLER_IMAGE}; then
+    if balena-engine pull ${INSTALLER_IMAGE}; then
         break
     fi
     sleep 1
@@ -21,7 +21,7 @@ TINKERBELL_URL=$(cat /proc/cmdline | sed -e 's/^.*tinkerbell=//' -e 's/ .*$//')/
 
 tinkerbell_post()
 {
-    system-docker run burmilla/curl -X POST -H "Content-Type: application/json" -d "{\"type\":\"provisioning.$1\",\"body\":\"$2\"}" ${TINKERBELL_URL}
+    balena-engine run burmilla/curl -X POST -H "Content-Type: application/json" -d "{\"type\":\"provisioning.$1\",\"body\":\"$2\"}" ${TINKERBELL_URL}
 }
 
 tinkerbell_post 104 "Connected to magic install system"
@@ -106,9 +106,9 @@ if [ "$RAID" = "true" ]; then
 fi
 
 mkswap -L RANCHER_SWAP $SWAP
-system-docker run --privileged --entrypoint /bin/bash ${INSTALLER_IMAGE} -c "mkfs.ext4 -L RANCHER_BOOT $BOOT"
-system-docker run --privileged --entrypoint /bin/bash ${INSTALLER_IMAGE} -c "mkfs.ext4 -L RANCHER_STATE $ROOT"
-system-docker run --privileged --entrypoint /bin/bash ${INSTALLER_IMAGE} -c "mkfs.ext4 -L RANCHER_OEM $OEM"
+balena-engine run --privileged --entrypoint /bin/bash ${INSTALLER_IMAGE} -c "mkfs.ext4 -L RANCHER_BOOT $BOOT"
+balena-engine run --privileged --entrypoint /bin/bash ${INSTALLER_IMAGE} -c "mkfs.ext4 -L RANCHER_STATE $ROOT"
+balena-engine run --privileged --entrypoint /bin/bash ${INSTALLER_IMAGE} -c "mkfs.ext4 -L RANCHER_OEM $OEM"
 
 tinkerbell_post 105 "Server partitions created"
 
@@ -123,7 +123,7 @@ umount /mnt/oem
 
 tinkerbell_post 106 "OEM drive configured"
 
-METADATA=$(system-docker run burmilla/curl -sL https://metadata.packet.net/metadata)
+METADATA=$(balena-engine run burmilla/curl -sL https://metadata.packet.net/metadata)
 eval $(echo ${METADATA} | jq -r '.network.addresses[] | select(.address_family == 4 and .public) | "ADDRESS=\(.address)/\(.cidr)\nGATEWAY=\(.gateway)"')
 eval $(echo ${METADATA} | jq -r '.network.interfaces[0] | "MAC=\(.mac)"')
 NETWORK_ARGS="rancher.network.interfaces.bond0.address=$ADDRESS rancher.network.interfaces.bond0.gateway=$GATEWAY rancher.network.interfaces.mac:${MAC}.bond=bond0"

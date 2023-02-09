@@ -172,7 +172,7 @@ func editSyslinux(c *cli.Context) error {
 		return errors.New("global.cfg can not be found")
 	}
 
-	cmd := exec.Command("system-docker", "run", "--rm", "-it",
+	cmd := exec.Command("balena-engine", "run", "--rm", "-it",
 		"-v", "/:/host",
 		"-w", "/host",
 		"--entrypoint=nano",

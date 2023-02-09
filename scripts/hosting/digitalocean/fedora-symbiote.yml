@@ -29,11 +29,11 @@ if type ros 2>/dev/null; then
 	if [ "$(ros config get rancher.environment.installer)" == "true" ] && ros --version &>/dev/null; then
 		# This stuff isn't called automatically atm, need to ru manually
 		#FIXME removing the grub dir stops `ros os upgrade` from re-installing syslinux, which seems to cause havoc
-		system-docker run -dit --privileged --name stuff alpine top
-		system-docker exec -it stuff mount /dev/vda1 /mnt
-		system-docker exec -it stuff rm -rf /mnt/boot/grub /mnt/boot/*fc25* /mnt/var /mnt/usr /mnt/dev /mnt/proc /mnt/sys /mnt/tmp
-		system-docker exec -it stuff umount /mnt
-		system-docker rm -f stuff
+		balena-engine run -dit --privileged --name stuff alpine top
+		balena-engine exec -it stuff mount /dev/vda1 /mnt
+		balena-engine exec -it stuff rm -rf /mnt/boot/grub /mnt/boot/*fc25* /mnt/var /mnt/usr /mnt/dev /mnt/proc /mnt/sys /mnt/tmp
+		balena-engine exec -it stuff umount /mnt
+		balena-engine rm -f stuff
 
 
 		ros config set rancher.debug true

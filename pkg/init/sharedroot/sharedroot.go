@@ -15,7 +15,7 @@ func Setup(c *config.CloudConfig) (*config.CloudConfig, error) {
 	}
 
 	if fsmount.IsInitrd() {
-		for _, i := range []string{"/mnt", "/media", "/var/lib/system-docker"} {
+		for _, i := range []string{"/mnt", "/media", "/var/lib/balena-engine"} {
 			if err := os.MkdirAll(i, 0755); err != nil {
 				return c, err
 			}

@@ -47,7 +47,7 @@ echo "tar-image: USER_IMAGES=$USER_IMAGES"
 if [ "$COMPRESS" == "" ]; then
     ARCHIVE_CMD="gzip"
 else
-    # system-docker can not load images which compressed by xz with a compression level of 9
+    # balena-engine can not load images which compressed by xz with a compression level of 9
     # decompression consumes more memory if using level 9
     # the default compression level for xz is 6
     ARCHIVE_CMD="xz -4 -e"

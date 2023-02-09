@@ -85,11 +85,11 @@ ARG OS_BASE_URL_arm64=https://github.com/burmilla/os-base/releases/download/v202
 ARG OS_INITRD_BASE_URL_amd64=https://github.com/burmilla/os-initrd-base/releases/download/v2022.02.8-2/os-initrd-base-amd64.tar.gz
 ARG OS_INITRD_BASE_URL_arm64=https://github.com/burmilla/os-initrd-base/releases/download/v2022.02.8-2/os-initrd-base-arm64.tar.gz
 
-ARG SYSTEM_DOCKER_VERSION=17.06.107
-ARG SYSTEM_DOCKER_URL_amd64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-amd64-${SYSTEM_DOCKER_VERSION}.tgz
-ARG SYSTEM_DOCKER_URL_arm64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-arm64-${SYSTEM_DOCKER_VERSION}.tgz
+ARG BALENA_ENGINE_VERSION=20.10.29
+ARG BALENA_ENGINE_URL_amd64=https://github.com/burmilla/os-balena-engine/releases/download/v${BALENA_ENGINE_VERSION}/balena-engine-v${BALENA_ENGINE_VERSION}.tar.gz
+ARG BALENA_ENGINE_URL_arm64=https://github.com/burmilla/os-balena-engine/releases/download/v${BALENA_ENGINE_VERSION}/balena-engine-v${BALENA_ENGINE_VERSION}-arm64.tar.gz
 
-ARG USER_DOCKER_VERSION=23.0.0rc3
+ARG USER_DOCKER_VERSION=23.0.1
 ARG USER_DOCKER_ENGINE_VERSION=docker-${USER_DOCKER_VERSION}
 
 ARG AZURE_SERVICE=false
@@ -132,9 +132,9 @@ ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
     OS_FIRMWARE=${OS_FIRMWARE} \
     REPO_VERSION=master \
     SELINUX_POLICY_URL=${SELINUX_POLICY_URL} \
-    SYSTEM_DOCKER_URL=SYSTEM_DOCKER_URL_${ARCH} \
-    SYSTEM_DOCKER_URL_amd64=${SYSTEM_DOCKER_URL_amd64} \
-    SYSTEM_DOCKER_URL_arm64=${SYSTEM_DOCKER_URL_arm64} \
+    BALENA_ENGINE_URL=BALENA_ENGINE_URL_${ARCH} \
+    BALENA_ENGINE_URL_amd64=${BALENA_ENGINE_URL_amd64} \
+    BALENA_ENGINE_URL_arm64=${BALENA_ENGINE_URL_arm64} \
     USER_DOCKER_VERSION=${USER_DOCKER_VERSION} \
     USER_DOCKER_ENGINE_VERSION=${USER_DOCKER_ENGINE_VERSION} \
     AZURE_SERVICE=${AZURE_SERVICE} \

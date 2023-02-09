@@ -14,11 +14,11 @@ func selinuxCommand() cli.Command {
 	app.Hidden = true
 	app.Name = "selinux"
 	app.Action = func(c *cli.Context) error {
-		argv := []string{"system-docker", "run", "-it", "--privileged", "--rm",
+		argv := []string{"balena-engine", "run", "-it", "--privileged", "--rm",
 			"--net", "host", "--pid", "host", "--ipc", "host",
 			"-v", "/usr/bin/docker:/usr/bin/docker.dist:ro",
 			"-v", "/usr/bin/ros:/usr/bin/dockerlaunch:ro",
-			"-v", "/usr/bin/ros:/usr/bin/system-docker:ro",
+			"-v", "/usr/bin/ros:/usr/bin/balena-engine:ro",
 			"-v", "/usr/bin/ros:/sbin/poweroff:ro",
 			"-v", "/usr/bin/ros:/sbin/reboot:ro",
 			"-v", "/usr/bin/ros:/sbin/halt:ro",
@@ -51,7 +51,7 @@ func selinuxCommand() cli.Command {
 			"-v", "/var/lib/selinux:/var/lib/selinux",
 			"-v", "/usr/share/selinux:/usr/share/selinux",
 			fmt.Sprintf("%s/os-selinuxtools:%s%s", config.OsRepo, config.Version, config.Suffix), "bash"}
-		syscall.Exec("/bin/system-docker", argv, []string{})
+		syscall.Exec("/bin/balena-engine", argv, []string{})
 		return nil
 	}
 

@@ -346,7 +346,7 @@ func availableEngines(cfg *config.CloudConfig, update bool) []string {
 
 // CurrentEngine gets the name of the docker that's running
 func CurrentEngine() (engine string) {
-	// sudo system-docker inspect --format "{{.Config.Image}}" docker
+	// sudo balena-engine inspect --format "{{.Config.Image}}" docker
 	client, err := docker.NewSystemClient()
 	if err != nil {
 		log.Warnf("Failed to detect current docker: %v", err)

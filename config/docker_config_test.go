@@ -46,10 +46,10 @@ func TestGenerateEngineOptsString(t *testing.T) {
 
 	testContains(t, fmt.Sprint(generateEngineOptsSlice(EngineOpts{
 		Host: []string{
-			"unix:///var/run/system-docker.sock",
+			"unix:///var/run/balena-engine.sock",
 			"unix:///var/run/docker.sock",
 		},
-	})), "--host unix:///var/run/system-docker.sock", "--host unix:///var/run/docker.sock")
+	})), "--host unix:///var/run/balena-engine.sock", "--host unix:///var/run/docker.sock")
 
 	testContains(t, fmt.Sprint(generateEngineOptsSlice(EngineOpts{
 		LogOpts: map[string]string{

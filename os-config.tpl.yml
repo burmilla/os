@@ -18,7 +18,7 @@ rancher:
       dhcp_timeout: 10
       dns:
         nameservers: [8.8.8.8, 8.8.4.4]
-    system_docker_logs: /var/log/system-docker.log
+    system_docker_logs: /var/log/balena-engine.log
   ssh:
     daemon: true
   hypervisor_service: true
@@ -77,9 +77,9 @@ rancher:
     bridge: none
     storage_driver: overlay2
     restart: false
-    graph: /var/lib/system-docker
+    graph: /var/lib/balena-engine
     group: root
-    host: ["unix:///var/run/system-docker.sock"]
+    host: ["unix:///var/run/balena-engine.sock"]
     userland_proxy: false
   console: {{.OS_CONSOLE}}
   cloud_init:
@@ -122,8 +122,9 @@ rancher:
       read_only: true
       volumes:
       - /usr/bin/ros:/usr/bin/ros:ro
-      - /usr/bin/system-docker:/usr/bin/system-docker:ro
-      - /usr/bin/system-docker-runc:/usr/bin/system-docker-runc:ro
+      - /usr/bin/balena-engine:/usr/bin/balena-engine:ro
+      - /usr/bin/balena-engine-dev:/usr/bin/balena-engine-dev:ro
+      - /usr/bin/balena-engine-runc:/usr/bin/balena-engine-runc:ro
     system-volumes:
       image: {{.OS_REPO}}/os-base:{{.VERSION}}{{.SUFFIX}}
       command: echo
@@ -342,7 +343,7 @@ rancher:
       privileged: true
       restart: always
       volumes:
-      - /var/run/system-docker.sock:/var/run/docker.sock
+      - /var/run/balena-engine.sock:/var/run/docker.sock
       environment:
         DOCKER_API_VERSION: "1.22"
     udev-cold:
@@ -395,18 +396,18 @@ rancher:
       - all-volumes
       volumes:
       - /sys:/host/sys
-      - /var/lib/system-docker:/var/lib/system-docker:shared
+      - /var/lib/balena-engine:/var/lib/balena-engine:rshared
   system_docker:
     exec: true
     storage_driver: overlay2
     bip: 172.18.42.1/16
     restart: false
-    graph: /var/lib/system-docker
+    graph: /var/lib/balena-engine
     group: root
-    host: ["unix:///var/run/system-docker.sock"]
-    pid_file: /var/run/system-docker.pid
-    exec_root: /var/run/system-docker
-    config_file: /etc/docker/system-docker.json
+    host: ["unix:///var/run/balena-engine.sock"]
+    pid_file: /var/run/balena-engine.pid
+    exec_root: /var/run/balena-engine
+    config_file: /etc/docker/balena-engine.json
     userland_proxy: false
     log_opts:
       max-size: 25m

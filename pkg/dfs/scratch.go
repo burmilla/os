@@ -514,7 +514,7 @@ func cleanupFiles(graphDirectory string) {
 	zeroFiles := []string{
 		"/etc/docker/key.json",
 		"/etc/docker/daemon.json",
-		"/etc/docker/system-daemon.json",
+		"/etc/balena-engine/daemon.json",
 		path.Join(graphDirectory, "image/overlay/repositories.json"),
 	}
 

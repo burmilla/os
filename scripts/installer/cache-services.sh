@@ -3,7 +3,7 @@ set -e -x
 
 root="/mnt/install"
 cache="/var/lib/rancher/cache"
-preload="/var/lib/rancher/preload/system-docker"
+preload="/var/lib/rancher/preload/balena-engine"
 
 partition=$1
 images=$2
@@ -16,9 +16,9 @@ cache_services() {
 cache_images() {
     mkdir -p ${root}${preload}
     for i in ${images}; do
-        system-docker pull $i
+        balena-engine pull $i
     done
-    system-docker save -o ${root}${preload}/os-include.tar ${images}
+    balena-engine save -o ${root}${preload}/os-include.tar ${images}
 }
 
 mkdir -p ${root}

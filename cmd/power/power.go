@@ -174,7 +174,7 @@ func reboot(name string, force bool, code uint) {
 		}
 	}()
 
-	// reboot -f should work even when system-docker is having problems
+	// reboot -f should work even when balena-engine is having problems
 	if !force {
 		if kexecFlag || previouskexecFlag || kexecAppendFlag != "" {
 			// pass through the cmdline args
@@ -186,7 +186,7 @@ func reboot(name string, force bool, code uint) {
 	}
 
 	if kexecFlag || previouskexecFlag || kexecAppendFlag != "" {
-		// need to mount boot dir, or `system-docker run -v /:/host -w /host/boot` ?
+		// need to mount boot dir, or `balena-engine run -v /:/host -w /host/boot` ?
 		baseName := "/mnt/new_img"
 		_, _, err := install.MountDevice(baseName, "", "", false)
 		if err != nil {

@@ -138,7 +138,7 @@ func InitLogger() {
 func logTheseApps() bool {
 	// TODO: mmm, not very functional.
 	if filepath.Base(os.Args[0]) == "ros" ||
-		//		filepath.Base(os.Args[0]) == "system-docker" ||
+		//		filepath.Base(os.Args[0]) == "balena-engine" ||
 		filepath.Base(os.Args[0]) == "host_ros" {
 		return false
 	}
