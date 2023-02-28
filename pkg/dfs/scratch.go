@@ -63,10 +63,10 @@ type Config struct {
 
 func createMounts(mounts ...[]string) error {
 	for _, mount := range mounts {
-		log.Debugf("Mounting %s %s %s %s", mount[0], mount[1], mount[2], mount[3])
+		log.Infof("Mounting %s %s %s %s", mount[0], mount[1], mount[2], mount[3])
 		err := util.Mount(mount[0], mount[1], mount[2], mount[3])
 		if err != nil {
-			return err
+			log.Errorf("Ignoring error: %s", err)
 		}
 	}
 
@@ -75,10 +75,10 @@ func createMounts(mounts ...[]string) error {
 
 func createOptionalMounts(mounts ...[]string) {
 	for _, mount := range mounts {
-		log.Debugf("Mounting %s %s %s %s", mount[0], mount[1], mount[2], mount[3])
+		log.Infof("Mounting %s %s %s %s", mount[0], mount[1], mount[2], mount[3])
 		err := util.Mount(mount[0], mount[1], mount[2], mount[3])
 		if err != nil {
-			log.Debugf("Unable to mount %s %s %s %s: %v", mount[0], mount[1], mount[2], mount[3], err)
+			log.Errorf("Unable to mount %s %s %s %s: %v", mount[0], mount[1], mount[2], mount[3], err)
 		}
 	}
 }
@@ -445,17 +445,17 @@ func ParseConfig(config *Config, args ...string) []string {
 
 func PrepareFs(config *Config) error {
 	if err := createMounts(mounts...); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	createOptionalMounts(optionalMounts...)
 
 	if err := mountCgroups(config.CgroupHierarchy); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	if err := createLayout(config); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	return firstPrepare()
@@ -574,7 +574,7 @@ func firstPrepare() error {
 		"/etc/passwd",
 		"/etc/group",
 	); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	if err := defaultFolders(
@@ -584,11 +584,11 @@ func firstPrepare() error {
 		"/etc/selinux/ros/policy",
 		"/etc/selinux/ros/contexts",
 	); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	if err := createPasswd(); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	return createGroup()
@@ -597,25 +597,25 @@ func firstPrepare() error {
 func secondPrepare(config *Config, docker string, args ...string) error {
 
 	if err := setupNetworking(config); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	if err := touchSockets(args...); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	if err := setupLogging(config); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	for _, i := range []string{docker, iptables, modprobe} {
 		if err := setupBin(config, i); err != nil {
-			return err
+			log.Errorf("Ignoring error: %s", err)
 		}
 	}
 
 	if err := setUlimit(config); err != nil {
-		return err
+		log.Errorf("Ignoring error: %s", err)
 	}
 
 	ioutil.WriteFile("/proc/sys/net/ipv4/ip_forward", []byte("1"), 0655)
