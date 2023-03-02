@@ -450,8 +450,10 @@ func PrepareFs(config *Config) error {
 
 	createOptionalMounts(optionalMounts...)
 
-	if err := mountCgroups(config.CgroupHierarchy); err != nil {
-		return err
+	if util.GetHypervisor() != "wsl2" {
+		if err := mountCgroups(config.CgroupHierarchy); err != nil {
+			return err
+		}
 	}
 
 	if err := createLayout(config); err != nil {
