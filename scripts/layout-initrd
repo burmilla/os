@@ -1,6 +1,7 @@
 #!/bin/bash
 
 function cache_services() {
+    echo "Caching service: $1"
     local SERVICE_YMLFILE=$1
 
     local SERVICE_URL=${OS_SERVICES_REPO}/${REPO_VERSION}
@@ -26,6 +27,7 @@ cp -rf assets/selinux          ${INITRD_DIR}/usr/etc
 cp build/images*.tar           ${INITRD_DIR}/usr/share/ros/
 cp bin/ros                     ${INITRD_DIR}/usr/bin/
 ln -s usr/bin/ros              ${INITRD_DIR}/init
+ln -s ros                      ${INITRD_DIR}/usr/bin/init
 ln -s bin                      ${INITRD_DIR}/usr/sbin
 ln -s usr/sbin                 ${INITRD_DIR}/sbin
 
