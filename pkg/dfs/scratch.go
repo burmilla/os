@@ -1,7 +1,6 @@
 package dfs
 
 import (
-	"bufio"
 	"io"
 	"io/ioutil"
 	"os"
@@ -37,7 +36,7 @@ var (
 		{"none", "/proc", "proc", ""},
 		{"none", "/run", "tmpfs", ""},
 		{"none", "/sys", "sysfs", ""},
-		{"none", "/sys/fs/cgroup", "tmpfs", ""},
+		{"cgroup2", "/sys/fs/cgroup", "cgroup2", "rw,nosuid,nodev,noexec,relatime,nsdelegate"},
 	}
 	optionalMounts = [][]string{
 		{"none", "/sys/fs/selinux", "selinuxfs", "ro"},
@@ -45,20 +44,19 @@ var (
 )
 
 type Config struct {
-	Fork            bool
-	PidOne          bool
-	CommandName     string
-	DNSConfig       netconf.DNSConfig
-	BridgeName      string
-	BridgeAddress   string
-	BridgeMtu       int
-	CgroupHierarchy map[string]string
-	LogFile         string
-	NoLog           bool
-	NoFiles         uint64
-	Environment     []string
-	GraphDirectory  string
-	DaemonConfig    string
+	Fork           bool
+	PidOne         bool
+	CommandName    string
+	DNSConfig      netconf.DNSConfig
+	BridgeName     string
+	BridgeAddress  string
+	BridgeMtu      int
+	LogFile        string
+	NoLog          bool
+	NoFiles        uint64
+	Environment    []string
+	GraphDirectory string
+	DaemonConfig   string
 }
 
 func createMounts(mounts ...[]string) error {
@@ -97,52 +95,6 @@ func createDirs(dirs ...string) error {
 	return nil
 }
 
-func mountCgroups(hierarchyConfig map[string]string) error {
-	f, err := os.Open("/proc/cgroups")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-
-	hierarchies := make(map[string][]string)
-
-	for scanner.Scan() {
-		text := scanner.Text()
-		log.Debugf("/proc/cgroups: %s", text)
-		fields := strings.Split(text, "\t")
-		cgroup := fields[0]
-		if cgroup == "" || cgroup[0] == '#' || (len(fields) > 3 && fields[3] == "0") {
-			continue
-		}
-
-		hierarchy := hierarchyConfig[cgroup]
-		if hierarchy == "" {
-			hierarchy = fields[1]
-		}
-
-		if hierarchy == "0" {
-			hierarchy = cgroup
-		}
-
-		hierarchies[hierarchy] = append(hierarchies[hierarchy], cgroup)
-	}
-
-	for _, hierarchy := range hierarchies {
-		if err := mountCgroup(strings.Join(hierarchy, ",")); err != nil {
-			return err
-		}
-	}
-
-	if err = scanner.Err(); err != nil {
-		return err
-	}
-
-	log.Debug("Done mouting cgroupfs")
-	return nil
-}
-
 func CreateSymlinks(pathSets [][]string) error {
 	for _, paths := range pathSets {
 		if err := CreateSymlink(paths[0], paths[1]); err != nil {
@@ -164,22 +116,13 @@ func CreateSymlink(src, dest string) error {
 	return nil
 }
 
-func mountCgroup(cgroup string) error {
-	if err := createDirs("/sys/fs/cgroup/" + cgroup); err != nil {
+func mountCgroup() error {
+	if err := createDirs("/sys/fs/cgroup"); err != nil {
 		return err
 	}
 
-	if err := createMounts([][]string{{"none", "/sys/fs/cgroup/" + cgroup, "cgroup", cgroup}}...); err != nil {
+	if err := createMounts([][]string{{"none", "/sys/fs/cgroup", "cgroup2", "rw,nosuid,nodev,noexec,relatime,nsdelegate"}}...); err != nil {
 		return err
-	}
-
-	parts := strings.Split(cgroup, ",")
-	if len(parts) > 1 {
-		for _, part := range parts {
-			if err := CreateSymlink("/sys/fs/cgroup/"+cgroup, "/sys/fs/cgroup/"+part); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
@@ -443,7 +386,7 @@ func ParseConfig(config *Config, args ...string) []string {
 	return args
 }
 
-func PrepareFs(config *Config) error {
+func PrepareFs() error {
 	if err := createMounts(mounts...); err != nil {
 		return err
 	}
@@ -451,13 +394,9 @@ func PrepareFs(config *Config) error {
 	createOptionalMounts(optionalMounts...)
 
 	if util.GetHypervisor() != "wsl2" {
-		if err := mountCgroups(config.CgroupHierarchy); err != nil {
+		if err := mountCgroup(); err != nil {
 			return err
 		}
-	}
-
-	if err := createLayout(config); err != nil {
-		return err
 	}
 
 	return firstPrepare()
@@ -700,7 +639,7 @@ func runOrExec(config *Config, docker string, args ...string) (*exec.Cmd, error)
 }
 
 func LaunchDocker(config *Config, docker string, args ...string) (*exec.Cmd, error) {
-	if err := PrepareFs(config); err != nil {
+	if err := PrepareFs(); err != nil {
 		return nil, err
 	}
 

@@ -21,7 +21,6 @@ import (
 
 	"github.com/codegangsta/cli"
 	"golang.org/x/crypto/ssh/terminal"
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -206,14 +205,6 @@ sudo ros service up docker-compose
 		if err := os.Symlink(link.oldname, link.newname); err != nil {
 			log.Error(err)
 		}
-	}
-
-	// mount systemd cgroups
-	if err := os.MkdirAll("/sys/fs/cgroup/systemd", 0555); err != nil {
-		log.Error(err)
-	}
-	if err := unix.Mount("cgroup", "/sys/fs/cgroup/systemd", "cgroup", 0, "none,name=systemd"); err != nil {
-		log.Error(err)
 	}
 
 	// font backslashes need to be escaped for when issue is output! (but not the others..)

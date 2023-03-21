@@ -9,19 +9,8 @@ import (
 	"github.com/burmilla/os/pkg/log"
 )
 
-var (
-	mountConfig = dfs.Config{
-		CgroupHierarchy: map[string]string{
-			"cpu":      "cpu",
-			"cpuacct":  "cpu",
-			"net_cls":  "net_cls",
-			"net_prio": "net_cls",
-		},
-	}
-)
-
 func FS(c *config.CloudConfig) (*config.CloudConfig, error) {
-	return c, dfs.PrepareFs(&mountConfig)
+	return c, dfs.PrepareFs()
 }
 
 func SaveCmdline(c *config.CloudConfig) (*config.CloudConfig, error) {
