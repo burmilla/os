@@ -116,18 +116,6 @@ func CreateSymlink(src, dest string) error {
 	return nil
 }
 
-func mountCgroup() error {
-	if err := createDirs("/sys/fs/cgroup"); err != nil {
-		return err
-	}
-
-	if err := createMounts([][]string{{"none", "/sys/fs/cgroup", "cgroup2", "rw,nosuid,nodev,noexec,relatime,nsdelegate"}}...); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func execDocker(config *Config, docker, cmd string, args []string) (*exec.Cmd, error) {
 	if len(args) > 0 && args[0] == "docker" {
 		args = args[1:]
@@ -392,12 +380,6 @@ func PrepareFs() error {
 	}
 
 	createOptionalMounts(optionalMounts...)
-
-	if util.GetHypervisor() != "wsl2" {
-		if err := mountCgroup(); err != nil {
-			return err
-		}
-	}
 
 	return firstPrepare()
 }
