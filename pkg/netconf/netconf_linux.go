@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	defaultDhcpArgs = []string{"dhcpcd", "-MA4"}
+	defaultDhcpArgs = []string{"dhcpcd", "-MA"}
 	exitDhcpArgs    = []string{"dhcpcd", "-x"}
 	exitWpaArgs     = []string{"wpa_cli", "terminate"}
 	dhcpReleaseCmd  = "dhcpcd --release"
