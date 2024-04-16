@@ -255,6 +255,7 @@ sudo ros service up docker-compose
 		}
 	}
 
+	// FixMe: Skip 169.254.169.254 , support IPv6
 	cmd = exec.Command("bash", "-c", `echo $(/sbin/ifconfig | grep -B1 "inet" |awk '{ if ( $1 == "inet" ) { print $2 } else if ( $3 == "mtu" ) { printf "%s:" ,$1 } }' |awk -F: '{ print $1 ": " $3}') >> /etc/issue`)
 	if err := cmd.Run(); err != nil {
 		log.Error(err)
