@@ -22,6 +22,7 @@ HostbasedAuthentication no
 PermitEmptyPasswords no
 AllowTcpForwarding no
 DebianBanner no
+PasswordAuthentication no
 
 # Restrict key exchange, cipher, and MAC algorithms, as per sshaudit.com hardening guide.
 KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha256
