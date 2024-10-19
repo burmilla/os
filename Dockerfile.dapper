@@ -65,8 +65,8 @@ ARG KERNEL_VERSION=5.10.211-burmilla
 ARG KERNEL_URL_amd64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-x86.tar.gz
 ARG KERNEL_URL_arm64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-arm64.tar.gz
 
-ARG BUILD_DOCKER_URL_amd64=https://get.docker.com/builds/Linux/x86_64/docker-1.10.3
-ARG BUILD_DOCKER_URL_arm64=https://github.com/burmilla/docker/releases/download/v1.10.3-ros1/docker-1.10.3_arm64
+ARG BUILD_DOCKER_URL_amd64=https://download.docker.com/linux/static/stable/x86_64/docker-26.1.4.tgz
+ARG BUILD_DOCKER_URL_arm64=https://download.docker.com/linux/static/stable/aarch64/docker-26.1.4.tgz
 
 ARG OS_RELEASES_YML=https://raw.githubusercontent.com/burmilla/releases/v2.0.x
 
@@ -154,7 +154,8 @@ RUN curl -L https://storage.googleapis.com/golang/go${GO_VERSION}.linux-${HOST_A
     go get github.com/burmilla/trash
 
 # Install Host Docker
-RUN curl -fL ${!BUILD_DOCKER_URL} > /usr/bin/docker && \
+RUN curl -fL ${!BUILD_DOCKER_URL} > /tmp/docker.tgz && \
+    tar zxvf /tmp/docker.tgz --strip-components=1 -C /usr/bin/ && \
     chmod +x /usr/bin/docker
 
 # Install dapper
