@@ -153,9 +153,6 @@ RUN echo "... Downloading  ${!KERNEL_URL}"; \
 RUN curl -L https://storage.googleapis.com/golang/go${GO_VERSION}.linux-${HOST_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
     go get github.com/burmilla/trash
 
-# Install golint
-RUN go get golang.org/x/lint/golint
-
 # Install Host Docker
 RUN curl -fL ${!BUILD_DOCKER_URL} > /usr/bin/docker && \
     chmod +x /usr/bin/docker
