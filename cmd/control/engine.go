@@ -129,7 +129,19 @@ func engineSwitch(c *cli.Context) error {
 	newEngine := c.Args()[0]
 
 	cfg := config.LoadConfig()
-	validateEngine(newEngine, cfg)
+
+	if newEngine == "latest" {
+		engines := availableEngines(cfg, true)
+		newEngine = engines[len(engines)-1]
+		currentEngine := CurrentEngine()
+		if newEngine == currentEngine {
+			log.Infof("Latest engine %s is already running", newEngine)
+			return nil
+		}
+		log.Infof("Switching to engine %s", newEngine)
+	} else {
+		validateEngine(newEngine, cfg)
+	}
 
 	project, err := compose.GetProject(cfg, true, false)
 	if err != nil {
@@ -282,14 +294,28 @@ func engineList(c *cli.Context) error {
 	engines := availableEngines(cfg, c.Bool("update"))
 	currentEngine := CurrentEngine()
 
+	i := 1
 	for _, engine := range engines {
 		if engine == currentEngine {
-			fmt.Printf("current  %s\n", engine)
+			if i == len(engines) {
+				fmt.Printf("current  %s (latest)\n", engine)
+			} else {
+				fmt.Printf("current  %s\n", engine)
+			}
 		} else if engine == cfg.Rancher.Docker.Engine {
-			fmt.Printf("enabled  %s\n", engine)
+			if i == len(engines) {
+				fmt.Printf("enabled  %s (latest)\n", engine)
+			} else {
+				fmt.Printf("enabled  %s\n", engine)
+			}
 		} else {
-			fmt.Printf("disabled %s\n", engine)
+			if i == len(engines) {
+				fmt.Printf("disabled %s (latest)\n", engine)
+			} else {
+				fmt.Printf("disabled %s\n", engine)
+			}
 		}
+		i++
 	}
 
 	// check the dind container

@@ -142,6 +142,34 @@ func consoleInitFunc() error {
 		}
 	}
 
+	const pollInfo = `#!/bin/sh
+export TERM=xterm-256color
+
+echo "
+
+
+$(tput setaf 3)
+    --------------------------------------------------
+   | Dear Burmilla OS user,                           |
+   | Please, answer to poll in $(tput setaf 4)burmillaos.org/poll$(tput setaf 3)    |
+   | about your main Burmilla OS use case.            |
+   |                                                  |
+   | Thank you advance.                               |
+   |                                                  |
+   | You can disable this message with command:       |
+   | $(tput setaf 5)sudo chmod a-x /etc/update-motd.d/1-burmillaos-1$(tput setaf 3) |
+    --------------------------------------------------
+$(tput sgr0)
+
+
+"
+`
+	if _, err := os.Stat("/etc/update-motd.d/1-burmillaos-1"); os.IsNotExist(err) {
+		if err := ioutil.WriteFile("/etc/update-motd.d/1-burmillaos-1", []byte(pollInfo), 0755); err != nil {
+			log.Error(err)
+		}
+	}
+
 	if err := setupSSH(cfg); err != nil {
 		log.Error(err)
 	}
@@ -183,20 +211,36 @@ func consoleInitFunc() error {
 		})
 	}
 
-	// create placeholder for docker-compose binary
-	const ComposePlaceholder = `
-#!/bin/bash
-echo 'INFO: System service "docker-compose" is not yet enabled'
-sudo ros service enable docker-compose
-sudo ros service up docker-compose
+	// create placeholder for docker binary with "docker compose" support
+	const DockerPlaceholder = `#!/bin/bash
+if [ "$1" == "compose" ]; then
+  /usr/local/bin/docker-compose "${@:2}"
+elif [ "$1" == "build" ]; then
+  DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
+  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /build -v $PWD:/build docker:$DOCKER_VERSION-cli docker build "${@:2}"
+elif [ "$1" == "builder" ]; then
+  DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
+  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /builder -v $PWD:/builder docker:$DOCKER_VERSION-cli docker builder "${@:2}"
+elif [ "$1" == "buildx" ]; then
+  DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
+  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /buildx -v $PWD:/buildx docker:$DOCKER_VERSION-cli docker buildx "${@:2}"
+else
+  /usr/bin/docker "$@"
+fi
 `
-	if _, err := os.Stat("/var/lib/rancher/compose"); os.IsNotExist(err) {
-		if err := os.MkdirAll("/var/lib/rancher/compose", 0555); err != nil {
+	if _, err := os.Stat("/usr/local/bin/docker"); os.IsNotExist(err) {
+		if err := ioutil.WriteFile("/usr/local/bin/docker", []byte(DockerPlaceholder), 0755); err != nil {
 			log.Error(err)
 		}
 	}
-	if _, err := os.Stat("/var/lib/rancher/compose/docker-compose"); os.IsNotExist(err) {
-		if err := ioutil.WriteFile("/var/lib/rancher/compose/docker-compose", []byte(ComposePlaceholder), 0755); err != nil {
+
+	// create placeholder for docker-compose binary
+	const ComposePlaceholder = `#!/bin/bash
+DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
+docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /compose -v $PWD:/compose docker:$DOCKER_VERSION-cli docker compose "$@"
+`
+	if _, err := os.Stat("/usr/local/bin/docker-compose"); os.IsNotExist(err) {
+		if err := ioutil.WriteFile("/usr/local/bin/docker-compose", []byte(ComposePlaceholder), 0755); err != nil {
 			log.Error(err)
 		}
 	}
@@ -279,6 +323,17 @@ sudo ros service up docker-compose
 
 	if err := util.RunScript("/etc/init.d/apparmor", "start"); err != nil {
 		log.Error(err)
+	}
+
+	// Check if user Docker has ever run in this installation yet and switch to latest version if not
+	if _, err := os.Stat("/var/lib/docker/engine-id"); os.IsNotExist(err) {
+		log.Warn("User Docker does not exist, switching to latest version")
+		cmd := exec.Command("/usr/bin/ros", "engine", "switch", "latest")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Error(err)
+		}
 	}
 
 	// Enable Bash colors

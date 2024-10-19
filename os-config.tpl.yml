@@ -87,7 +87,7 @@ rancher:
     - configdrive:/media/config-2
   repositories:
     core:
-      url: {{.OS_SERVICES_REPO}}/{{.REPO_VERSION}}
+      url: {{.OS_SERVICES_REPO}}/v2.0.x
   state:
     fstype: auto
     oem_fstype: auto
