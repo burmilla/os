@@ -22,11 +22,13 @@ import (
 )
 
 const (
-	defaultStorageContext = "console"
-	dockerPidFile         = "/var/run/docker.pid"
-	sourceDirectory       = "/engine"
-	destDirectory         = "/var/lib/rancher/engine"
-	dockerCompletionFName = "completion"
+	defaultStorageContext  = "console"
+	dockerPidFile          = "/var/run/docker.pid"
+	sourceDirectory        = "/engine"
+	destDirectory          = "/var/lib/rancher/engine"
+	pluginsSourceDirectory = "/engine-plugins"
+	pluginsDestDirectory   = "/var/lib/rancher/engine-plugins"
+	dockerCompletionFName  = "completion"
 )
 
 var (
@@ -38,6 +40,10 @@ var (
 
 func userDockerAction(c *cli.Context) error {
 	if err := copyBinaries(sourceDirectory, destDirectory); err != nil {
+		return err
+	}
+
+	if err := copyBinaries(pluginsSourceDirectory, pluginsDestDirectory); err != nil {
 		return err
 	}
 

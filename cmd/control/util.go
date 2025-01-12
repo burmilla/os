@@ -54,6 +54,11 @@ func symLinkEngineBinary() []symlink {
 		{"/var/lib/rancher/engine/docker-containerd-ctr", "/usr/bin/docker-containerd-ctr"},
 		{"/var/lib/rancher/engine/docker-containerd-shim", "/usr/bin/docker-containerd-shim"},
 		{"/var/lib/rancher/engine/docker-runc", "/usr/bin/docker-runc"},
+
+		// Docker CLI plugins
+		{"/var/lib/rancher/engine-plugins/docker-compose", "/usr/bin/docker-compose"},
+		{"/var/lib/rancher/engine-plugins/docker-compose", "/usr/libexec/docker/cli-plugins/docker-compose"},
+		{"/var/lib/rancher/engine-plugins/docker-buildx", "/usr/libexec/docker/cli-plugins/docker-buildx"},
 	}
 	return baseSymlink
 }

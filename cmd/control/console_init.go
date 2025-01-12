@@ -203,46 +203,19 @@ $(tput sgr0)
 		}
 	}
 
+	// create Docker CLI plugins folder
+	if _, err := os.Stat("/usr/libexec/docker/cli-plugins"); os.IsNotExist(err) {
+		if err = os.MkdirAll("/usr/libexec/docker/cli-plugins", 0755); err != nil {
+			log.Error(err)
+		}
+	}
+
 	baseSymlink := symLinkEngineBinary()
 
 	if _, err := os.Stat(dockerCompletionFile); err == nil {
 		baseSymlink = append(baseSymlink, symlink{
 			dockerCompletionFile, dockerCompletionLinkFile,
 		})
-	}
-
-	// create placeholder for docker binary with "docker compose" support
-	const DockerPlaceholder = `#!/bin/bash
-if [ "$1" == "compose" ]; then
-  /usr/local/bin/docker-compose "${@:2}"
-elif [ "$1" == "build" ]; then
-  DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
-  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /build -v $PWD:/build docker:$DOCKER_VERSION-cli docker build "${@:2}"
-elif [ "$1" == "builder" ]; then
-  DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
-  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /builder -v $PWD:/builder docker:$DOCKER_VERSION-cli docker builder "${@:2}"
-elif [ "$1" == "buildx" ]; then
-  DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
-  docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /buildx -v $PWD:/buildx docker:$DOCKER_VERSION-cli docker buildx "${@:2}"
-else
-  /usr/bin/docker "$@"
-fi
-`
-	if _, err := os.Stat("/usr/local/bin/docker"); os.IsNotExist(err) {
-		if err := ioutil.WriteFile("/usr/local/bin/docker", []byte(DockerPlaceholder), 0755); err != nil {
-			log.Error(err)
-		}
-	}
-
-	// create placeholder for docker-compose binary
-	const ComposePlaceholder = `#!/bin/bash
-DOCKER_VERSION=$(sudo system-docker inspect --format "{{.Config.Image}}" docker | cut -d ":" -f 2)
-docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /compose -v $PWD:/compose docker:$DOCKER_VERSION-cli docker compose "$@"
-`
-	if _, err := os.Stat("/usr/local/bin/docker-compose"); os.IsNotExist(err) {
-		if err := ioutil.WriteFile("/usr/local/bin/docker-compose", []byte(ComposePlaceholder), 0755); err != nil {
-			log.Error(err)
-		}
 	}
 
 	for _, link := range baseSymlink {
@@ -317,14 +290,6 @@ docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /compose -v 
 		log.Error(err)
 	}
 
-	if err := util.RunScript("/etc/rc.local"); err != nil {
-		log.Error(err)
-	}
-
-	if err := util.RunScript("/etc/init.d/apparmor", "start"); err != nil {
-		log.Error(err)
-	}
-
 	// Check if user Docker has ever run in this installation yet and switch to latest version if not
 	if _, err := os.Stat("/var/lib/docker/engine-id"); os.IsNotExist(err) {
 		log.Warn("User Docker does not exist, switching to latest version")
@@ -334,6 +299,14 @@ docker run -it --rm -v /var/run/docker.sock:/var/run/docker.sock -w /compose -v 
 		if err := cmd.Run(); err != nil {
 			log.Error(err)
 		}
+	}
+
+	if err := util.RunScript("/etc/rc.local"); err != nil {
+		log.Error(err)
+	}
+
+	if err := util.RunScript("/etc/init.d/apparmor", "start"); err != nil {
+		log.Error(err)
 	}
 
 	// Enable Bash colors
