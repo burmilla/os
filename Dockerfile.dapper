@@ -61,7 +61,7 @@ ARG OS_REPO=burmilla
 ARG HOSTNAME_DEFAULT=burmilla
 ARG DISTRIB_ID=BurmillaOS
 
-ARG KERNEL_VERSION=5.10.211-burmilla
+ARG KERNEL_VERSION=5.10.235-burmilla
 ARG KERNEL_URL_amd64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-x86.tar.gz
 ARG KERNEL_URL_arm64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-arm64.tar.gz
 
