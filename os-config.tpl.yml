@@ -343,8 +343,6 @@ rancher:
       restart: always
       volumes:
       - /var/run/system-docker.sock:/var/run/docker.sock
-      environment:
-        DOCKER_API_VERSION: "1.22"
     udev-cold:
       image: {{.OS_REPO}}/os-base:{{.VERSION}}{{.SUFFIX}}
       command: ros udev-settle

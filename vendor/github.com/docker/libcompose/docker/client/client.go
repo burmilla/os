@@ -17,7 +17,7 @@ import (
 
 const (
 	// DefaultAPIVersion is the default docker API version set by libcompose
-	DefaultAPIVersion   = "v1.20"
+	DefaultAPIVersion   = "v1.31"
 	defaultTrustKeyFile = "key.json"
 	defaultCaFile       = "ca.pem"
 	defaultKeyFile      = "key.pem"
