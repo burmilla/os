@@ -14,16 +14,10 @@ import (
 )
 
 func LoadService(p *project.Project, cfg *config.CloudConfig, useNetwork bool, service string) error {
-	// First check the multi engine service file.
-	// If the name has been found in multi enging service file and matches, will not execute network.LoadServiceResource
-	// Otherwise will execute network.LoadServiceResource
-	bytes, err := network.LoadMultiEngineResource(service)
-	if err != nil || bytes == nil {
-		bytes, err = network.LoadServiceResource(service, useNetwork, cfg)
-		if err != nil {
-			log.Error(err)
-			return err
-		}
+	bytes, err := network.LoadServiceResource(service, useNetwork, cfg)
+	if err != nil {
+		log.Error(err)
+		return err
 	}
 
 	m := map[interface{}]interface{}{}
@@ -75,13 +69,6 @@ func loadConsoleService(cfg *config.CloudConfig, p *project.Project) error {
 	return LoadSpecialService(p, cfg, "console", cfg.Rancher.Console)
 }
 
-func loadEngineService(cfg *config.CloudConfig, p *project.Project) error {
-	if cfg.Rancher.Docker.Engine == "" || cfg.Rancher.Docker.Engine == cfg.Rancher.Defaults.Docker.Engine {
-		return nil
-	}
-	return LoadSpecialService(p, cfg, "docker", cfg.Rancher.Docker.Engine)
-}
-
 func projectReload(p *project.Project, useNetwork *bool, loadConsole bool, environmentLookup *docker.ConfigEnvironment, authLookup *docker.ConfigAuthLookup) func() error {
 	enabled := map[interface{}]interface{}{}
 	return func() error {
@@ -115,10 +102,6 @@ func projectReload(p *project.Project, useNetwork *bool, loadConsole bool, envir
 			if err := loadConsoleService(cfg, p); err != nil {
 				log.Errorf("Failed to load rancher.console=(%s): %v", cfg.Rancher.Console, err)
 			}
-		}
-
-		if err := loadEngineService(cfg, p); err != nil {
-			log.Errorf("Failed to load rancher.docker.engine=(%s): %v", cfg.Rancher.Docker.Engine, err)
 		}
 
 		return nil

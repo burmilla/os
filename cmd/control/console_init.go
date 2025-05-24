@@ -15,7 +15,6 @@ import (
 	"github.com/burmilla/os/cmd/cloudinitexecute"
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/config/cmdline"
-	"github.com/burmilla/os/pkg/compose"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
@@ -180,27 +179,6 @@ $(tput sgr0)
 
 	if err := modifySshdConfig(cfg); err != nil {
 		log.Error(err)
-	}
-
-	p, err := compose.GetProject(cfg, false, true)
-	if err != nil {
-		log.Error(err)
-	}
-
-	// check the multi engine service & generate the multi engine script
-	for _, key := range p.ServiceConfigs.Keys() {
-		serviceConfig, ok := p.ServiceConfigs.Get(key)
-		if !ok {
-			log.Errorf("Failed to get service config from the project")
-			continue
-		}
-		if _, ok := serviceConfig.Labels[config.UserDockerLabel]; ok {
-			err = util.GenerateDindEngineScript(serviceConfig.Labels[config.UserDockerLabel])
-			if err != nil {
-				log.Errorf("Failed to generate engine script: %v", err)
-				continue
-			}
-		}
 	}
 
 	// create Docker CLI plugins folder

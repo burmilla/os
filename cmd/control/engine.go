@@ -2,16 +2,13 @@ package control
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
-	"path"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/burmilla/os/cmd/control/service"
-	"github.com/burmilla/os/cmd/control/service/app"
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/compose"
 	"github.com/burmilla/os/pkg/docker"
@@ -20,14 +17,11 @@ import (
 	"github.com/burmilla/os/pkg/util/network"
 	"github.com/burmilla/os/pkg/util/versions"
 
-	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/reference"
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
-	composeConfig "github.com/docker/libcompose/config"
 	"github.com/docker/libcompose/project/options"
-	composeYaml "github.com/docker/libcompose/yaml"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
@@ -46,60 +40,6 @@ func engineSubcommands() []cli.Command {
 				cli.BoolFlag{
 					Name:  "no-pull",
 					Usage: "don't pull console image",
-				},
-			},
-		},
-		{
-			Name:        "create",
-			Usage:       "create Dind engine without a reboot",
-			Description: "must switch user docker to 17.12.1 or earlier if using Dind",
-			ArgsUsage:   "<name>",
-			Before:      preFlightValidate,
-			Action:      engineCreate,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "version, v",
-					Value: config.DefaultDind,
-					Usage: fmt.Sprintf("set the version for the engine, %s are available", config.SupportedDinds),
-				},
-				cli.StringFlag{
-					Name:  "network",
-					Usage: "set the network for the engine",
-				},
-				cli.StringFlag{
-					Name:  "fixed-ip",
-					Usage: "set the fixed ip for the engine",
-				},
-				cli.StringFlag{
-					Name:  "ssh-port",
-					Usage: "set the ssh port for the engine",
-				},
-				cli.StringFlag{
-					Name:  "authorized-keys",
-					Usage: "set the ssh authorized_keys absolute path for the engine",
-				},
-			},
-		},
-		{
-			Name:      "rm",
-			Usage:     "remove Dind engine without a reboot",
-			ArgsUsage: "<name>",
-			Before: func(c *cli.Context) error {
-				if len(c.Args()) != 1 {
-					return errors.New("Must specify exactly one Docker engine to remove")
-				}
-				return nil
-			},
-			Action: dindEngineRemove,
-			Flags: []cli.Flag{
-				cli.IntFlag{
-					Name:  "timeout,t",
-					Usage: "specify a shutdown timeout in seconds",
-					Value: 10,
-				},
-				cli.BoolFlag{
-					Name:  "force, f",
-					Usage: "do not prompt for input",
 				},
 			},
 		},
@@ -169,19 +109,9 @@ func engineSwitch(c *cli.Context) error {
 
 func engineCreate(c *cli.Context) error {
 	name := c.Args()[0]
-	version := c.String("version")
 	sshPort, _ := strconv.Atoi(c.String("ssh-port"))
 	if sshPort <= 0 {
 		sshPort = randomSSHPort()
-	}
-	authorizedKeys := c.String("authorized-keys")
-	network := c.String("network")
-	fixedIP := c.String("fixed-ip")
-
-	// generate & create engine compose
-	err := generateEngineCompose(name, version, sshPort, authorizedKeys, network, fixedIP)
-	if err != nil {
-		return err
 	}
 
 	// stage engine service
@@ -200,70 +130,6 @@ func engineCreate(c *cli.Context) error {
 		if err := config.Set("rancher.services_include", cfg.Rancher.ServicesInclude); err != nil {
 			log.Fatal(err)
 		}
-	}
-
-	// generate engine script
-	err = util.GenerateDindEngineScript(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return nil
-}
-
-func dindEngineRemove(c *cli.Context) error {
-	if !c.Bool("force") {
-		if !yes("Continue") {
-			return nil
-		}
-	}
-
-	// app.ProjectDelete needs to use this flag
-	// Allow deletion of the Dind engine
-	c.Set("force", "true")
-	// Remove volumes associated with the Dind engine container
-	c.Set("v", "true")
-
-	name := c.Args()[0]
-	cfg := config.LoadConfig()
-	p, err := compose.GetProject(cfg, true, false)
-	if err != nil {
-		log.Fatalf("Get project failed: %v", err)
-	}
-
-	// 1. service stop
-	err = app.ProjectStop(p, c)
-	if err != nil {
-		log.Fatalf("Stop project service failed: %v", err)
-	}
-
-	// 2. service delete
-	err = app.ProjectDelete(p, c)
-	if err != nil {
-		log.Fatalf("Delete project service failed: %v", err)
-	}
-
-	// 3. service delete
-	if _, ok := cfg.Rancher.ServicesInclude[name]; !ok {
-		log.Fatalf("Failed to found enabled service %s", name)
-	}
-
-	delete(cfg.Rancher.ServicesInclude, name)
-
-	if err = config.Set("rancher.services_include", cfg.Rancher.ServicesInclude); err != nil {
-		log.Fatal(err)
-	}
-
-	// 4. remove service from file
-	err = RemoveEngineFromCompose(name)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// 5. remove dind engine script
-	err = util.RemoveDindEngineScript(name)
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -301,12 +167,6 @@ func engineList(c *cli.Context) error {
 				fmt.Printf("current  %s (latest)\n", engine)
 			} else {
 				fmt.Printf("current  %s\n", engine)
-			}
-		} else if engine == cfg.Rancher.Docker.Engine {
-			if i == len(engines) {
-				fmt.Printf("enabled  %s (latest)\n", engine)
-			} else {
-				fmt.Printf("enabled  %s\n", engine)
 			}
 		} else {
 			if i == len(engines) {
@@ -494,94 +354,6 @@ func randomSSHPort() int {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port
-}
-
-func generateEngineCompose(name, version string, sshPort int, authorizedKeys, network, fixedIP string) error {
-	if err := os.MkdirAll(path.Dir(config.MultiDockerConfFile), 0700); err != nil && !os.IsExist(err) {
-		log.Errorf("Failed to create directory for file %s: %v", config.MultiDockerConfFile, err)
-		return err
-	}
-
-	composeConfigs := map[string]composeConfig.ServiceConfigV1{}
-
-	if _, err := os.Stat(config.MultiDockerConfFile); err == nil {
-		// read from engine compose
-		bytes, err := ioutil.ReadFile(config.MultiDockerConfFile)
-		if err != nil {
-			return err
-		}
-		err = yaml.Unmarshal(bytes, &composeConfigs)
-		if err != nil {
-			return err
-		}
-	}
-
-	if err := os.MkdirAll(config.MultiDockerDataDir+"/"+name, 0700); err != nil && !os.IsExist(err) {
-		log.Errorf("Failed to create directory for file %s: %v", config.MultiDockerDataDir+"/"+name, err)
-		return err
-	}
-
-	volumes := []string{
-		"/lib/modules:/lib/modules",
-		config.MultiDockerDataDir + "/" + name + ":" + config.MultiDockerDataDir + "/" + name,
-	}
-	if authorizedKeys != "" {
-		volumes = append(volumes, authorizedKeys+":/root/.ssh/authorized_keys")
-	}
-
-	composeConfigs[name] = composeConfig.ServiceConfigV1{
-		Image:       "${REGISTRY_DOMAIN}/" + version,
-		Restart:     "always",
-		Privileged:  true,
-		Net:         network,
-		Ports:       []string{strconv.Itoa(sshPort) + ":22"},
-		Volumes:     volumes,
-		VolumesFrom: []string{},
-		Command: composeYaml.Command{
-			"--storage-driver=overlay2",
-			"--data-root=" + config.MultiDockerDataDir + "/" + name,
-			"--host=unix://" + config.MultiDockerDataDir + "/" + name + "/docker-" + name + ".sock",
-		},
-		Labels: composeYaml.SliceorMap{
-			"io.rancher.os.scope":     "system",
-			"io.rancher.os.after":     "console",
-			config.UserDockerLabel:    name,
-			config.UserDockerNetLabel: network,
-			config.UserDockerFIPLabel: fixedIP,
-		},
-	}
-
-	bytes, err := yaml.Marshal(composeConfigs)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(config.MultiDockerConfFile, bytes, 0640)
-}
-
-func RemoveEngineFromCompose(name string) error {
-	composeConfigs := map[string]composeConfig.ServiceConfigV1{}
-
-	if _, err := os.Stat(config.MultiDockerConfFile); err == nil {
-		// read from engine compose
-		bytes, err := ioutil.ReadFile(config.MultiDockerConfFile)
-		if err != nil {
-			return err
-		}
-		err = yaml.Unmarshal(bytes, &composeConfigs)
-		if err != nil {
-			return err
-		}
-	}
-
-	delete(composeConfigs, name)
-
-	bytes, err := yaml.Marshal(composeConfigs)
-	if err != nil {
-		return err
-	}
-
-	return ioutil.WriteFile(config.MultiDockerConfFile, bytes, 0640)
 }
 
 func CheckUserDefineNetwork(name string) (*types.NetworkResource, error) {

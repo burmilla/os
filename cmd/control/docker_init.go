@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
@@ -74,19 +73,6 @@ func dockerInitAction(c *cli.Context) error {
 		log.Error(err)
 	}
 
-	mountInfo, err := ioutil.ReadFile("/proc/self/mountinfo")
-	if err != nil {
-		return err
-	}
-
-	for _, mount := range strings.Split(string(mountInfo), "\n") {
-		if strings.Contains(mount, "/var/lib/user-docker /var/lib/docker") && strings.Contains(mount, "rootfs") {
-			os.Setenv("DOCKER_RAMDISK", "true")
-		}
-	}
-
-	cfg := config.LoadConfig()
-
 	for _, link := range symLinkEngineBinary() {
 		syscall.Unlink(link.newname)
 		if _, err := os.Stat(link.oldname); err == nil {
@@ -94,11 +80,6 @@ func dockerInitAction(c *cli.Context) error {
 				log.Error(err)
 			}
 		}
-	}
-
-	err = checkZfsBackingFS(cfg.Rancher.Docker.StorageDriver, cfg.Rancher.Docker.DataRoot)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	args := []string{

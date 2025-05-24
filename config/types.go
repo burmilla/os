@@ -53,8 +53,6 @@ const (
 	WPATemplateFile        = "/etc/wpa_supplicant.conf.tpl"
 	DHCPCDConfigFile       = "/etc/dhcpcd.conf"
 	DHCPCDTemplateFile     = "/etc/dhcpcd.conf.tpl"
-	MultiDockerConfFile    = "/var/lib/rancher/conf.d/m-user-docker.yml"
-	MultiDockerDataDir     = "/var/lib/m-user-docker"
 	UdevRulesDir           = "/etc/udev/rules.d"
 	UdevRulesExtrasDir     = "/lib/udev/rules-extras.d"
 )
@@ -144,7 +142,6 @@ type RancherConfig struct {
 	State               StateConfig                               `yaml:"state,omitempty"`
 	SystemDocker        DockerConfig                              `yaml:"system_docker,omitempty"`
 	Upgrade             UpgradeConfig                             `yaml:"upgrade,omitempty"`
-	Docker              DockerConfig                              `yaml:"docker,omitempty"`
 	RegistryAuths       map[string]types.AuthConfig               `yaml:"registry_auths,omitempty"`
 	Defaults            Defaults                                  `yaml:"defaults,omitempty"`
 	ResizeDevice        string                                    `yaml:"resize_device,omitempty"`
@@ -231,7 +228,6 @@ type CloudInit struct {
 
 type Defaults struct {
 	Hostname         string                `yaml:"hostname,omitempty"`
-	Docker           DockerConfig          `yaml:"docker,omitempty"`
 	Network          netconf.NetworkConfig `yaml:"network,omitempty"`
 	SystemDockerLogs string                `yaml:"system_docker_logs,omitempty"`
 }

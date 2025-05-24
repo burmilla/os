@@ -16,10 +16,6 @@ func (d *DockerConfig) FullArgs() []string {
 		args = append(args, d.TLSArgs...)
 	}
 
-	if d.UserNsEnabled {
-		args = append(args, "--userns-remap")
-		args = append(args, "user-docker:user-docker")
-	}
 	return args
 }
 
