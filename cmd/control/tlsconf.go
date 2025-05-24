@@ -7,7 +7,6 @@ import (
 
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
-	"github.com/burmilla/os/pkg/util"
 
 	"github.com/codegangsta/cli"
 	machineUtil "github.com/docker/machine/utils"
@@ -80,40 +79,6 @@ func writeCerts(generateServer bool, hostname []string, certPath, keyPath, caCer
 }
 
 func writeCaCerts(cfg *config.CloudConfig, caCertPath, caKeyPath string) error {
-	if cfg.Rancher.Docker.CACert == "" {
-		if err := machineUtil.GenerateCACertificate(caCertPath, caKeyPath, NAME, BITS); err != nil {
-			return err
-		}
-
-		caCert, err := ioutil.ReadFile(caCertPath)
-		if err != nil {
-			return err
-		}
-
-		caKey, err := ioutil.ReadFile(caKeyPath)
-		if err != nil {
-			return err
-		}
-
-		// caCertPath, caKeyPath are already written to by machineUtil.GenerateCACertificate()
-		if err := config.Set("rancher.docker.ca_cert", string(caCert)); err != nil {
-			return err
-		}
-		if err := config.Set("rancher.docker.ca_key", string(caKey)); err != nil {
-			return err
-		}
-	} else {
-		cfg = config.LoadConfig()
-
-		if err := util.WriteFileAtomic(caCertPath, []byte(cfg.Rancher.Docker.CACert), 0400); err != nil {
-			return err
-		}
-
-		if err := util.WriteFileAtomic(caKeyPath, []byte(cfg.Rancher.Docker.CAKey), 0400); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 

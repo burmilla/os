@@ -13,7 +13,6 @@ import (
 	"github.com/burmilla/os/pkg/log"
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
-	composeConfig "github.com/docker/libcompose/config"
 )
 
 var (
@@ -160,33 +159,6 @@ func LoadServiceResource(name string, useNetwork bool, cfg *config.CloudConfig) 
 			log.Debugf("Loaded %s from %s", name, serviceURL)
 			return bytes, nil
 		}
-	}
-
-	return nil, err
-}
-
-func LoadMultiEngineResource(name string) ([]byte, error) {
-	composeConfigs := map[string]composeConfig.ServiceConfigV1{}
-	if _, err := os.Stat(config.MultiDockerConfFile); err == nil {
-		multiEngineBytes, err := ioutil.ReadFile(config.MultiDockerConfFile)
-		if err != nil {
-			return nil, err
-		}
-		err = yaml.Unmarshal(multiEngineBytes, &composeConfigs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if _, ok := composeConfigs[name]; !ok {
-		return nil, errors.New("Failed to found " + name + " from " + config.MultiDockerConfFile + " will load from network")
-	}
-
-	foundServiceConfig := map[string]composeConfig.ServiceConfigV1{}
-	foundServiceConfig[name] = composeConfigs[name]
-	bytes, err := yaml.Marshal(foundServiceConfig)
-	if err == nil {
-		return bytes, err
 	}
 
 	return nil, err

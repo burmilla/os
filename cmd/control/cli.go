@@ -128,13 +128,6 @@ func Main() {
 			SkipFlagParsing: true,
 			Action:          udevSettleAction,
 		},
-		{
-			Name:            "user-docker",
-			Hidden:          true,
-			HideHelp:        true,
-			SkipFlagParsing: true,
-			Action:          userDockerAction,
-		},
 		installCommand,
 	}
 

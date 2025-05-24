@@ -37,9 +37,6 @@ func TestValidate(t *testing.T) {
   content: |
     #!/bin/bash
     wait-for-docker`), "")
-	testValidate(t, []byte(`rancher:
-  docker:
-    extra_args: ['--insecure-registry', 'my.registry.com']`), "")
 
 	testValidate(t, []byte("bad_key: {}"), "Additional property bad_key is not allowed")
 	testValidate(t, []byte("rancher: []"), "rancher: Invalid type. Expected: object, given: array")

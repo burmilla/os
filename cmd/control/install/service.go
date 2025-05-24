@@ -54,16 +54,6 @@ func GetCacheImageList(cloudconfig string, oldcfg *config.CloudConfig) []string 
 		}
 	}
 
-	// docker engine
-	newEngine := newcfg.Rancher.Docker.Engine
-	if newEngine != "" && newEngine != oldcfg.Rancher.Docker.Engine {
-		engineImage := getServiceImage(newEngine, "docker", oldcfg, newcfg)
-		if engineImage != "" {
-			savedImages = append(savedImages, engineImage)
-		}
-
-	}
-
 	return savedImages
 }
 

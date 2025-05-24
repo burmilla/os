@@ -47,7 +47,6 @@ var schema = `{
 				"state": {"$ref": "#/definitions/state_config"},
 				"system_docker": {"$ref": "#/definitions/docker_config"},
 				"upgrade": {"$ref": "#/definitions/upgrade_config"},
-				"docker": {"$ref": "#/definitions/docker_config"},
 				"registry_auths": {"type": "object"},
 				"defaults": {"$ref": "#/definitions/defaults_config"},
 				"resize_device": {"type": "string"},

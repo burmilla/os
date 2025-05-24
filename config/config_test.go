@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/burmilla/os/config/cmdline"
-	"github.com/burmilla/os/pkg/util"
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/stretchr/testify/require"
@@ -291,39 +290,4 @@ one:
 
 	assert.True(data2.One.Three)
 	assert.True(data2.One.Two)
-}
-
-func TestUserDocker(t *testing.T) {
-	assert := require.New(t)
-
-	config := &CloudConfig{
-		Rancher: RancherConfig{
-			Docker: DockerConfig{
-				TLS: true,
-			},
-		},
-	}
-
-	bytes, err := yaml.Marshal(config)
-	assert.Nil(err)
-
-	config = &CloudConfig{}
-	assert.False(config.Rancher.Docker.TLS)
-	err = yaml.Unmarshal(bytes, config)
-	assert.Nil(err)
-	assert.True(config.Rancher.Docker.TLS)
-
-	data := map[interface{}]interface{}{}
-	err = util.Convert(config, &data)
-	assert.Nil(err)
-
-	val, ok := data["rancher"].(map[interface{}]interface{})["docker"]
-	assert.True(ok)
-
-	m, ok := val.(map[interface{}]interface{})
-	assert.True(ok)
-	v, ok := m["tls"]
-	assert.True(ok)
-	assert.True(v.(bool))
-
 }

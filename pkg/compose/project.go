@@ -2,8 +2,6 @@ package compose
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 
 	"github.com/burmilla/os/config"
 	rosDocker "github.com/burmilla/os/pkg/docker"
@@ -227,17 +225,6 @@ func StageServices(cfg *config.CloudConfig, services ...string) error {
 
 	// read engine services
 	composeConfigs := map[string]composeConfig.ServiceConfigV1{}
-	if _, err := os.Stat(config.MultiDockerConfFile); err == nil {
-		// read from engine compose
-		multiEngineBytes, err := ioutil.ReadFile(config.MultiDockerConfFile)
-		if err != nil {
-			return fmt.Errorf("Failed to read %s : %v", config.MultiDockerConfFile, err)
-		}
-		err = yaml.Unmarshal(multiEngineBytes, &composeConfigs)
-		if err != nil {
-			return fmt.Errorf("Failed to unmarshal %s : %v", config.MultiDockerConfFile, err)
-		}
-	}
 
 	for _, service := range services {
 		var bytes []byte

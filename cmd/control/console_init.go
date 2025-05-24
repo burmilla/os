@@ -15,7 +15,6 @@ import (
 	"github.com/burmilla/os/cmd/cloudinitexecute"
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/config/cmdline"
-	"github.com/burmilla/os/pkg/compose"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
@@ -182,27 +181,6 @@ $(tput sgr0)
 		log.Error(err)
 	}
 
-	p, err := compose.GetProject(cfg, false, true)
-	if err != nil {
-		log.Error(err)
-	}
-
-	// check the multi engine service & generate the multi engine script
-	for _, key := range p.ServiceConfigs.Keys() {
-		serviceConfig, ok := p.ServiceConfigs.Get(key)
-		if !ok {
-			log.Errorf("Failed to get service config from the project")
-			continue
-		}
-		if _, ok := serviceConfig.Labels[config.UserDockerLabel]; ok {
-			err = util.GenerateDindEngineScript(serviceConfig.Labels[config.UserDockerLabel])
-			if err != nil {
-				log.Errorf("Failed to generate engine script: %v", err)
-				continue
-			}
-		}
-	}
-
 	// create Docker CLI plugins folder
 	if _, err := os.Stat("/usr/libexec/docker/cli-plugins"); os.IsNotExist(err) {
 		if err = os.MkdirAll("/usr/libexec/docker/cli-plugins", 0755); err != nil {
@@ -288,17 +266,6 @@ $(tput sgr0)
 
 	if err := ioutil.WriteFile(consoleDone, []byte(CurrentConsole()), 0644); err != nil {
 		log.Error(err)
-	}
-
-	// Check if user Docker has ever run in this installation yet and switch to latest version if not
-	if _, err := os.Stat("/var/lib/docker/engine-id"); os.IsNotExist(err) {
-		log.Warn("User Docker does not exist, switching to latest version")
-		cmd := exec.Command("/usr/bin/ros", "engine", "switch", "latest")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			log.Error(err)
-		}
 	}
 
 	if err := util.RunScript("/etc/rc.local"); err != nil {
