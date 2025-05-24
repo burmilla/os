@@ -68,7 +68,7 @@ ARG KERNEL_URL_arm64=https://github.com/burmilla/os-kernel/releases/download/v${
 ARG BUILD_DOCKER_URL_amd64=https://download.docker.com/linux/static/stable/x86_64/docker-26.1.4.tgz
 ARG BUILD_DOCKER_URL_arm64=https://download.docker.com/linux/static/stable/aarch64/docker-26.1.4.tgz
 
-ARG OS_RELEASES_YML=https://raw.githubusercontent.com/burmilla/releases/v2.0.x
+ARG OS_RELEASES_YML=https://raw.githubusercontent.com/burmilla/releases/v3.0.x
 
 ARG OS_SERVICES_REPO=https://raw.githubusercontent.com/${OS_REPO}/os-services
 ARG IMAGE_NAME=${OS_REPO}/os
@@ -86,9 +86,6 @@ ARG OS_INITRD_BASE_URL_arm64=https://github.com/burmilla/os-initrd-base/releases
 ARG SYSTEM_DOCKER_VERSION=17.06.107
 ARG SYSTEM_DOCKER_URL_amd64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-amd64-${SYSTEM_DOCKER_VERSION}.tgz
 ARG SYSTEM_DOCKER_URL_arm64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-arm64-${SYSTEM_DOCKER_VERSION}.tgz
-
-ARG USER_DOCKER_VERSION=latest
-ARG USER_DOCKER_ENGINE_VERSION=docker-${USER_DOCKER_VERSION}
 
 ARG AZURE_SERVICE=false
 ARG PROXMOXVE_SERVICE=false
@@ -132,8 +129,6 @@ ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
     SYSTEM_DOCKER_URL=SYSTEM_DOCKER_URL_${ARCH} \
     SYSTEM_DOCKER_URL_amd64=${SYSTEM_DOCKER_URL_amd64} \
     SYSTEM_DOCKER_URL_arm64=${SYSTEM_DOCKER_URL_arm64} \
-    USER_DOCKER_VERSION=${USER_DOCKER_VERSION} \
-    USER_DOCKER_ENGINE_VERSION=${USER_DOCKER_ENGINE_VERSION} \
     AZURE_SERVICE=${AZURE_SERVICE} \
     PROXMOXVE_SERVICE=${PROXMOXVE_SERVICE} \
     SKIP_BUILD=${SKIP_BUILD}
