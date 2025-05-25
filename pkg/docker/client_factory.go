@@ -50,6 +50,7 @@ func (c *ClientFactory) Create(service project.Service) dockerclient.APIClient {
 		return c.systemClient
 	}
 
+	// FixMe: Support other engine types in here (Waiting for engine x)
 	waitFor(&c.userOnce, c.userClient, config.DockerHost)
 	return c.userClient
 }
