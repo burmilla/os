@@ -12,10 +12,8 @@ import (
 	"strings"
 
 	"github.com/burmilla/os/config"
-	"github.com/burmilla/os/pkg/docker"
 	"github.com/burmilla/os/pkg/log"
 
-	"github.com/codegangsta/cli"
 	dockerClient "github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
 )
@@ -23,14 +21,6 @@ import (
 const (
 	userImagesPreloadDirectory = "/var/lib/rancher/preload/docker"
 )
-
-func preloadImagesAction(c *cli.Context) error {
-	err := PreloadImages(docker.NewDefaultClient, userImagesPreloadDirectory)
-	if err != nil {
-		log.Errorf("Failed to preload user images: %v", err)
-	}
-	return err
-}
 
 func shouldLoad(file string) bool {
 	if strings.HasSuffix(file, ".done") {

@@ -95,13 +95,6 @@ func Main() {
 			Subcommands: osSubcommands(),
 		},
 		{
-			Name:            "preload-images",
-			Hidden:          true,
-			HideHelp:        true,
-			SkipFlagParsing: true,
-			Action:          preloadImagesAction,
-		},
-		{
 			Name:            "recovery-init",
 			Hidden:          true,
 			HideHelp:        true,
