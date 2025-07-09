@@ -2,7 +2,10 @@ package netconf
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/binary"
 	"errors"
+	"math/rand"
 	"net"
 	"os"
 	"os/exec"
@@ -10,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/burmilla/os/pkg/log"
 
@@ -249,6 +253,7 @@ func applyOuter(link netlink.Link, netCfg *NetworkConfig, wg *sync.WaitGroup, us
 		return
 	}
 
+	rand.Seed(time.Now().UnixNano())
 	wg.Add(1)
 	go func(link netlink.Link, match InterfaceConfig) {
 		if match.DHCP {
@@ -301,6 +306,15 @@ func hasDhcp(iface string) bool {
 	return len(out) > 0
 }
 
+// get random period by interface name's sha1 hash (+math.random)
+// https://goplay.tools/snippet/up4kmHx57a_H
+func getRandomPeriod(s string, m int, d int, r int) int {
+	h20 := sha1.Sum([]byte(s))
+	h8 := h20[0:8]
+	u8 := binary.BigEndian.Uint64(h8)
+	return int(u8 % uint64(m)) * d + rand.Intn(r)
+}
+
 func runDhcp(netCfg *NetworkConfig, iface string, argstr string, setHostname, setDNS bool) {
 	args := []string{}
 	if argstr != "" {
@@ -331,6 +345,12 @@ func runDhcp(netCfg *NetworkConfig, iface string, argstr string, setHostname, se
 	args = append(args, "-w", "--debug")
 
 	args = append(args, iface)
+
+	wait := getRandomPeriod(iface, 15, 50, 10);
+	log.Infof("waiting random period(%d ms) for %s...", wait, iface)
+	time.Sleep(time.Duration(wait) * time.Millisecond)
+	log.Infof("done.(%s)", iface)
+
 	cmd := exec.Command(args[0], args[1:]...)
 	log.Infof("Running DHCP on %s: %s", iface, strings.Join(args, " "))
 	cmd.Stdout = os.Stdout
