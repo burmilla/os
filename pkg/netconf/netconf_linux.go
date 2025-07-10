@@ -307,12 +307,16 @@ func hasDhcp(iface string) bool {
 }
 
 // get random period by interface name's sha1 hash (+math.random)
-// https://goplay.tools/snippet/up4kmHx57a_H
-func getRandomPeriod(s string, m int, d int, r int) int {
+// https://go.dev/play/p/hwG4JKC4Alc
+func getRandomPeriod(s string, m int, d int, r int, dr int) int {
 	h20 := sha1.Sum([]byte(s))
 	h8 := h20[0:8]
 	u8 := binary.BigEndian.Uint64(h8)
-	return int(u8 % uint64(m)) * d + rand.Intn(r)
+	result := int(u8 % uint64(m))
+	if r != 0 {
+		result = result + rand.Intn(r)
+	}
+	return result
 }
 
 func runDhcp(netCfg *NetworkConfig, iface string, argstr string, setHostname, setDNS bool) {
@@ -346,7 +350,7 @@ func runDhcp(netCfg *NetworkConfig, iface string, argstr string, setHostname, se
 
 	args = append(args, iface)
 
-	wait := getRandomPeriod(iface, 15, 50, 10);
+	wait := getRandomPeriod(iface, 79, 10, 0, 1);
 	log.Infof("waiting random period(%d ms) for %s...", wait, iface)
 	time.Sleep(time.Duration(wait) * time.Millisecond)
 	log.Infof("done.(%s)", iface)
