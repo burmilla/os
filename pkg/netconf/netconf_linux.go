@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 
 	"github.com/burmilla/os/pkg/log"
@@ -185,23 +184,19 @@ func ApplyNetworkConfigs(netCfg *NetworkConfig, userSetHostname, userSetDNS bool
 		return false, err
 	}
 
-	wg := sync.WaitGroup{}
-
 	//apply network config
 	for _, link := range links {
 		if !strings.Contains(link.Attrs().Name, "wlan") {
-			applyOuter(link, netCfg, &wg, userSetHostname, userSetDNS)
+			applyOuter(link, netCfg, userSetHostname, userSetDNS)
 		}
 	}
-	wg.Wait()
 
 	// apply wifi network config
 	for _, link := range links {
 		if strings.Contains(link.Attrs().Name, "wlan") {
-			applyOuter(link, netCfg, &wg, userSetHostname, userSetDNS)
+			applyOuter(link, netCfg, userSetHostname, userSetDNS)
 		}
 	}
-	wg.Wait()
 
 	// make sure there was a DHCP set dns - or tell ros to write 8.8.8.8,8.8.8.4
 	log.Infof("Checking to see if DNS was set by DHCP")
@@ -219,7 +214,7 @@ func ApplyNetworkConfigs(netCfg *NetworkConfig, userSetHostname, userSetDNS bool
 	return dnsSet, nil
 }
 
-func applyOuter(link netlink.Link, netCfg *NetworkConfig, wg *sync.WaitGroup, userSetHostname, userSetDNS bool) {
+func applyOuter(link netlink.Link, netCfg *NetworkConfig, userSetHostname, userSetDNS bool) {
 	linkName := link.Attrs().Name
 	log.Debugf("applyOuter(%v, %v), link: %s", userSetHostname, userSetDNS, linkName)
 	match, ok := findMatch(link, netCfg)
@@ -249,20 +244,16 @@ func applyOuter(link netlink.Link, netCfg *NetworkConfig, wg *sync.WaitGroup, us
 		return
 	}
 
-	wg.Add(1)
-	go func(link netlink.Link, match InterfaceConfig) {
-		if match.DHCP {
-			if match.WifiNetwork != "" {
-				runWifiDhcp(netCfg, link, match.WifiNetwork, !userSetHostname, !userSetDNS)
-			} else {
-				runDhcp(netCfg, link.Attrs().Name, match.DHCPArgs, !userSetHostname, !userSetDNS)
-			}
+	if match.DHCP {
+		if match.WifiNetwork != "" {
+			runWifiDhcp(netCfg, link, match.WifiNetwork, !userSetHostname, !userSetDNS)
 		} else {
-			log.Infof("dhcp release %s", link.Attrs().Name)
-			runDhcp(netCfg, link.Attrs().Name, dhcpReleaseCmd, false, true)
+			runDhcp(netCfg, link.Attrs().Name, match.DHCPArgs, !userSetHostname, !userSetDNS)
 		}
-		wg.Done()
-	}(link, match)
+	} else {
+		log.Infof("dhcp release %s", link.Attrs().Name)
+		runDhcp(netCfg, link.Attrs().Name, dhcpReleaseCmd, false, true)
+	}
 }
 
 func GetDhcpLease(iface string) (lease map[string]string) {
