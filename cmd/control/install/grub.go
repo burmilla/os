@@ -10,10 +10,10 @@ import (
 )
 
 func RunGrub(baseName, device string) error {
-	log.Debugf("installGrub")
+	log.Debugf("installGrub baseName: %s , device %s ", baseName, device)
 
 	//grub-install --boot-directory=${baseName}/boot ${device}
-	cmd := exec.Command("grub-install", "--boot-directory="+baseName+"/boot", device)
+	cmd := exec.Command("grub-install", "--target=x86_64-efi", "--efi-directory="+baseName+"/boot/efi", "--boot-directory=/mnt/new_img/boot", device)
 	if err := cmd.Run(); err != nil {
 		log.Errorf("%s", err)
 		return err

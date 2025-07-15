@@ -40,7 +40,7 @@ var installCommand = cli.Command{
 			Name: "install-type, t",
 			Usage: `generic:    (Default) Creates 1 ext4 partition and installs BurmillaOS (syslinux)
                         amazon-ebs: Installs BurmillaOS and sets up PV-GRUB
-                        gptsyslinux: partition and format disk (gpt), then install BurmillaOS and setup Syslinux
+                        gpt: partition and format disk (gpt), then install BurmillaOS and setup Grub
                         `,
 		},
 		cli.StringFlag{
@@ -132,8 +132,12 @@ func installAction(c *cli.Context) error {
 
 	installType := c.String("install-type")
 	if installType == "" {
-		log.Info("No install type specified...defaulting to generic")
 		installType = "generic"
+		_, err := os.Stat("/sys/firmware/efi")
+		if err == nil {
+			installType = "gpt"
+		}
+		log.Infof("No install type specified...defaulting to %s", installType)
 	}
 	if installType == "rancher-upgrade" ||
 		installType == "upgrade" {
@@ -304,9 +308,9 @@ func runInstall(image, installType, cloudConfig, device, partition, statedir, ka
 	if partition == "" {
 		if installType == "generic" ||
 			installType == "syslinux" ||
-			installType == "gptsyslinux" {
+			installType == "gpt" {
 			diskType := "msdos"
-			if installType == "gptsyslinux" {
+			if installType == "gpt" {
 				diskType = "gpt"
 			}
 			log.Debugf("running setDiskpartitions")
@@ -435,19 +439,40 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	defer util.Unmount(baseName)
 
 	diskType := "msdos"
-	if installType == "gptsyslinux" {
+	if installType == "gpt" {
 		diskType = "gpt"
 	}
 
 	switch installType {
 	case "syslinux":
 		fallthrough
-	case "gptsyslinux":
-		fallthrough
+	case "gpt":
+		log.Debugf("formatAndMount")
+		var err error
+		device, _, err = formatAndMount(baseName, device, device+"2", false)
+		if err != nil {
+			log.Errorf("formatAndMount %s", err)
+			return err
+		}
+		device, _, err = formatAndMount(baseName+"/boot/efi", device, device+"1", true)
+		if err != nil {
+			log.Errorf("formatAndMount %s", err)
+			return err
+		}
+		err = install.RunGrub(baseName, device)
+		if err != nil {
+			log.Errorf("RunGrub %s", err)
+			return err
+		}
+		err = seedData(baseName, cloudConfig, FILES)
+		if err != nil {
+			log.Errorf("seedData %s", err)
+			return err
+		}
 	case "generic":
 		log.Debugf("formatAndMount")
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			log.Errorf("formatAndMount %s", err)
 			return err
@@ -464,7 +489,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 		}
 	case "arm":
 		var err error
-		_, _, err = formatAndMount(baseName, device, partition)
+		_, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -474,7 +499,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	case "amazon-ebs-hvm":
 		CONSOLE = "ttyS0"
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -486,7 +511,7 @@ func layDownOS(image, installType, cloudConfig, device, partition, statedir, kap
 	case "googlecompute":
 		CONSOLE = "ttyS0"
 		var err error
-		device, _, err = formatAndMount(baseName, device, partition)
+		device, _, err = formatAndMount(baseName, device, partition, false)
 		if err != nil {
 			return err
 		}
@@ -734,6 +759,22 @@ func setDiskpartitions(device, diskType string) error {
 		return err
 	}
 
+	if diskType == "gpt" {
+		log.Debugf("making UEFI partition, device: %s", device)
+		cmd = exec.Command("parted", "-s", "-a", "optimal", device,
+			"mklabel gpt",
+			"mkpart ESP fat32 1MiB 100MiB",
+			"set 1 boot on",
+			"mkpart primary ext4 100MiB 100%",
+			"quit")
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Errorf("Failed to parted device %s: %v", device, err)
+			return err
+		}
+		return nil
+	}
+
 	log.Debugf("making single RANCHER_STATE partition, device: %s", device)
 	cmd = exec.Command("parted", "-s", "-a", "optimal", device,
 		"mklabel "+diskType, "--",
@@ -765,8 +806,19 @@ func partitionMounted(device string, file io.Reader) bool {
 	return false
 }
 
-func formatdevice(device, partition string) error {
+func formatdevice(device, partition string, efi bool) error {
 	log.Debugf("formatdevice %s", partition)
+
+	if efi {
+		cmd := exec.Command("mkfs.vfat", partition)
+		log.Debugf("Run(%v)", cmd)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			log.Errorf("mkfs.vfat: %s", err)
+			return err
+		}
+		return nil
+	}
 
 	//mkfs.ext4 -F -i 4096 -L RANCHER_STATE ${partition}
 	// -O ^64bit: for syslinux: http://www.syslinux.org/wiki/index.php?title=Filesystem#ext
@@ -780,10 +832,10 @@ func formatdevice(device, partition string) error {
 	return nil
 }
 
-func formatAndMount(baseName, device, partition string) (string, string, error) {
-	log.Debugf("formatAndMount")
+func formatAndMount(baseName, device, partition string, efi bool) (string, string, error) {
+	log.Debugf("formatAndMount device: %s , partition %s , UEFI: %v", device, partition, efi)
 
-	err := formatdevice(device, partition)
+	err := formatdevice(device, partition, efi)
 	if err != nil {
 		log.Errorf("formatdevice %s", err)
 		return device, partition, err
