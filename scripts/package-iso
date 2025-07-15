@@ -10,6 +10,7 @@ CD=${BUILD}/cd
 rm -rf ${CD}/
 ISO=${ARTIFACTS}/$(echo ${DISTRIB_ID} | tr '[:upper:]' '[:lower:]').iso
 
+mkdir -p ${CD}/boot/isolinux
 mkdir -p ${CD}/rancheros
 
 mkdir -p ${CD}/boot
@@ -23,9 +24,13 @@ cp ${ARTIFACTS}/vmlinuz-${KERNEL_VERSION}     ${CD}/boot/
 
 # cfg files creation moved to package-installer
 DIST=$(pwd)/dist
+cp -r ${DIST}/boot/* ${CD}/boot/
 mkdir -p ${CD}/boot/grub
 cat scripts/grub.cfg | envsubst > ${CD}/boot/grub/grub.cfg
 
+cp /usr/lib/ISOLINUX/isolinux.bin              ${CD}/boot/isolinux/
+cp /usr/lib/syslinux/modules/bios/ldlinux.c32  ${CD}/boot/isolinux/
+cp /usr/lib/syslinux/modules/bios/*.c32        ${CD}/boot/isolinux/
 # add the installer image to the iso for non-network / dev/test
 cp ${ARTIFACTS}/installer.tar                  ${CD}/rancheros/
 cp ${ARTIFACTS}/Dockerfile.${ARCH}             ${CD}/rancheros/
