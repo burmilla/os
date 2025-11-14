@@ -7,13 +7,8 @@ rancher:
     REGISTRY_DOMAIN: "docker.io"
   defaults:
     hostname: {{.HOSTNAME_DEFAULT}}
-    {{if eq "amd64" .ARCH -}}
     docker:
-      engine: {{.USER_DOCKER_ENGINE_VERSION}}
-    {{else -}}
-    docker:
-      engine: {{.USER_DOCKER_ENGINE_VERSION}}
-    {{end -}}
+      engine: latest
     network:
       dhcp_timeout: 10
       dns:
@@ -371,9 +366,9 @@ rancher:
       - system-volumes
     docker:
       {{if eq "amd64" .ARCH -}}
-      image: {{.OS_REPO}}/os-docker:{{.USER_DOCKER_VERSION}}{{.SUFFIX}}
+      image: {{.OS_REPO}}/os-docker:latest
       {{else -}}
-      image: {{.OS_REPO}}/os-docker:{{.USER_DOCKER_VERSION}}{{.SUFFIX}}
+      image: {{.OS_REPO}}/os-docker:latest
       {{end -}}
       command: ros user-docker
       environment:
@@ -414,11 +409,7 @@ rancher:
     image: {{.OS_REPO}}/os
     policy: download
   docker:
-    {{if eq "amd64" .ARCH -}}
-    engine: {{.USER_DOCKER_ENGINE_VERSION}}
-    {{else -}}
-    engine: {{.USER_DOCKER_ENGINE_VERSION}}
-    {{end -}}
+    engine: latest
     group: docker
     host: ["unix:///var/run/docker.sock"]
     log_opts:

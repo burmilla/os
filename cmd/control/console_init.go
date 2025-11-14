@@ -290,10 +290,14 @@ $(tput sgr0)
 		log.Error(err)
 	}
 
-	// Check if user Docker has ever run in this installation yet and switch to latest version if not
+	// Check if user Docker has ever run in this installation yet and switch to latest/user defined version if not
 	if _, err := os.Stat("/var/lib/docker/engine-id"); os.IsNotExist(err) {
-		log.Warn("User Docker does not exist, switching to latest version")
-		cmd := exec.Command("/usr/bin/ros", "engine", "switch", "latest")
+		dockerVersion := "latest"
+		if cfg.Rancher.Docker.Engine != dockerVersion {
+			dockerVersion = cfg.Rancher.Docker.Engine
+		}
+		log.Warn("User Docker does not exist, switching to " + dockerVersion)
+		cmd := exec.Command("/usr/bin/ros", "engine", "switch", dockerVersion)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
