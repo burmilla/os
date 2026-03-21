@@ -84,7 +84,11 @@ func (s *Service) missingImage() bool {
 }
 
 func (s *Service) requiresSyslog() bool {
-	return s.Config().Logging.Driver == "syslog"
+	cfg := s.Config()
+	if cfg.Logging != nil {
+		return cfg.Logging.Driver == "syslog"
+	}
+	return cfg.LogDriver == "syslog"
 }
 
 func (s *Service) requiresUserDocker() bool {

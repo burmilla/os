@@ -131,7 +131,7 @@ func (s *Service) ensureImageExists(ctx context.Context, noBuild bool) (string, 
 		return "", err
 	}
 
-	if s.Config().Build.Context != "" {
+	if s.Config().Build != nil && s.Config().Build.Context != "" {
 		if noBuild {
 			return "", fmt.Errorf("Service %q needs to be built, but no-build was specified", s.name)
 		}
@@ -166,7 +166,7 @@ func (s *Service) Build(ctx context.Context, buildOptions options.Build) error {
 }
 
 func (s *Service) build(ctx context.Context, buildOptions options.Build) error {
-	if s.Config().Build.Context == "" {
+	if s.Config().Build == nil || s.Config().Build.Context == "" {
 		return fmt.Errorf("Specified service does not have a build section")
 	}
 	builder := &builder.DaemonBuilder{
