@@ -43,13 +43,13 @@ func isVolume(s string) bool {
 
 // ConvertToAPI converts a service configuration to a docker API container configuration.
 func ConvertToAPI(s *Service) (*ConfigWrapper, error) {
-	config, hostConfig, err := Convert(s.serviceConfig, s.context.Context)
+	cfg, hostConfig, err := Convert(s.serviceConfig, s.context.Context)
 	if err != nil {
 		return nil, err
 	}
 
 	result := ConfigWrapper{
-		Config:     config,
+		Config:     cfg,
 		HostConfig: hostConfig,
 	}
 	return &result, nil
@@ -60,18 +60,14 @@ func isNamedVolume(volume string) bool {
 }
 
 func volumes(c *config.ServiceConfig, ctx project.Context) map[string]struct{} {
-	volumes := make(map[string]struct{}, len(c.Volumes))
-	for k, v := range c.Volumes {
-		if len(ctx.ComposeFiles) > 0 && !isNamedVolume(v) {
-			v = ctx.ResourceLookup.ResolvePath(v, ctx.ComposeFiles[0])
-		}
-
-		c.Volumes[k] = v
+	volumeStrs := config.VolumesToStringSlice(c.Volumes)
+	result := make(map[string]struct{}, len(volumeStrs))
+	for _, v := range volumeStrs {
 		if isVolume(v) {
-			volumes[v] = struct{}{}
+			result[v] = struct{}{}
 		}
 	}
-	return volumes
+	return result
 }
 
 func restartPolicy(c *config.ServiceConfig) (*container.RestartPolicy, error) {
@@ -83,22 +79,28 @@ func restartPolicy(c *config.ServiceConfig) (*container.RestartPolicy, error) {
 }
 
 func ports(c *config.ServiceConfig) (map[nat.Port]struct{}, nat.PortMap, error) {
-	ports, binding, err := nat.ParsePortSpecs(c.Ports)
+	portStrs := config.PortsToStringSlice(c.Ports)
+	exposeStrs := make([]string, len(c.Expose))
+	for i, e := range c.Expose {
+		exposeStrs[i] = fmt.Sprint(e)
+	}
+
+	portSpecs, binding, err := nat.ParsePortSpecs(portStrs)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	exPorts, _, err := nat.ParsePortSpecs(c.Expose)
+	exPorts, _, err := nat.ParsePortSpecs(exposeStrs)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for k, v := range exPorts {
-		ports[k] = v
+		portSpecs[k] = v
 	}
 
 	exposedPorts := map[nat.Port]struct{}{}
-	for k, v := range ports {
+	for k, v := range portSpecs {
 		exposedPorts[nat.Port(k)] = v
 	}
 
@@ -113,7 +115,7 @@ func ports(c *config.ServiceConfig) (map[nat.Port]struct{}, nat.PortMap, error) 
 	return exposedPorts, portBindings, nil
 }
 
-// Convert converts a service configuration to an docker API structures (Config and HostConfig)
+// Convert converts a service configuration to docker API structures (Config and HostConfig)
 func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *container.HostConfig, error) {
 	restartPolicy, err := restartPolicy(c)
 	if err != nil {
@@ -138,13 +140,16 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		}
 	}
 
-	config := &container.Config{
-		Entrypoint:   strslice.StrSlice(utils.CopySlice(c.Entrypoint)),
+	envSlice := config.EnvironmentToSlice(c.Environment)
+	volumeStrs := config.VolumesToStringSlice(c.Volumes)
+
+	containerConfig := &container.Config{
+		Entrypoint:   strslice.StrSlice(utils.CopySlice([]string(c.Entrypoint))),
 		Hostname:     c.Hostname,
 		Domainname:   c.DomainName,
 		User:         c.User,
-		Env:          utils.CopySlice(c.Environment),
-		Cmd:          strslice.StrSlice(utils.CopySlice(c.Command)),
+		Env:          utils.CopySlice(envSlice),
+		Cmd:          strslice.StrSlice(utils.CopySlice([]string(c.Command))),
 		Image:        c.Image,
 		Labels:       utils.CopyMap(c.Labels),
 		ExposedPorts: exposedPorts,
@@ -156,20 +161,28 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 	}
 
 	ulimits := []*units.Ulimit{}
-	if c.Ulimits.Elements != nil {
-		for _, ulimit := range c.Ulimits.Elements {
+	if c.Ulimits != nil {
+		for name, ulimit := range c.Ulimits {
 			ulimits = append(ulimits, &units.Ulimit{
-				Name: ulimit.Name,
-				Soft: ulimit.Soft,
-				Hard: ulimit.Hard,
+				Name: name,
+				Soft: int64(ulimit.Soft),
+				Hard: int64(ulimit.Hard),
 			})
 		}
 	}
 
+	logDriver := config.LoggingDriver(c)
+	logOpts := config.LoggingOptions(c)
+
+	networkMode := c.NetworkMode
+	if networkMode == "" {
+		networkMode = c.Net
+	}
+
 	resources := container.Resources{
 		CgroupParent: c.CgroupParent,
-		Memory:       c.MemLimit,
-		MemorySwap:   c.MemSwapLimit,
+		Memory:       int64(c.MemLimit),
+		MemorySwap:   int64(c.MemSwapLimit),
 		CPUShares:    c.CPUShares,
 		CPUQuota:     c.CPUQuota,
 		CpusetCpus:   c.CPUSet,
@@ -181,18 +194,18 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		VolumesFrom: volumesFrom,
 		CapAdd:      strslice.StrSlice(utils.CopySlice(c.CapAdd)),
 		CapDrop:     strslice.StrSlice(utils.CopySlice(c.CapDrop)),
-		ExtraHosts:  utils.CopySlice(c.ExtraHosts),
+		ExtraHosts:  utils.CopySlice(c.ExtraHosts.AsList()),
 		Privileged:  c.Privileged,
-		Binds:       Filter(c.Volumes, isBind),
-		DNS:         utils.CopySlice(c.DNS),
-		DNSSearch:   utils.CopySlice(c.DNSSearch),
+		Binds:       Filter(volumeStrs, isBind),
+		DNS:         utils.CopySlice([]string(c.DNS)),
+		DNSSearch:   utils.CopySlice([]string(c.DNSSearch)),
 		LogConfig: container.LogConfig{
-			Type:   c.Logging.Driver,
-			Config: utils.CopyMap(c.Logging.Options),
+			Type:   logDriver,
+			Config: utils.CopyMap(logOpts),
 		},
-		NetworkMode:    container.NetworkMode(c.NetworkMode),
+		NetworkMode:    container.NetworkMode(networkMode),
 		ReadonlyRootfs: c.ReadOnly,
-		OomScoreAdj:    c.OomScoreAdj,
+		OomScoreAdj:    int(c.OomScoreAdj),
 		PidMode:        container.PidMode(c.Pid),
 		UTSMode:        container.UTSMode(c.Uts),
 		IpcMode:        container.IpcMode(c.Ipc),
@@ -203,11 +216,11 @@ func Convert(c *config.ServiceConfig, ctx project.Context) (*container.Config, *
 		Resources:      resources,
 	}
 
-	return config, hostConfig, nil
+	return containerConfig, hostConfig, nil
 }
 
 func getVolumesFrom(volumesFrom []string, serviceConfigs *config.ServiceConfigs, projectName string) ([]string, error) {
-	volumes := []string{}
+	result := []string{}
 	for _, volumeFrom := range volumesFrom {
 		if serviceConfig, ok := serviceConfigs.Get(volumeFrom); ok {
 			// It's a service - Use the first one
@@ -216,16 +229,15 @@ func getVolumesFrom(volumesFrom []string, serviceConfigs *config.ServiceConfigs,
 			if serviceConfig.ContainerName != "" {
 				name = serviceConfig.ContainerName
 			}
-			volumes = append(volumes, name)
+			result = append(result, name)
 		} else {
-			volumes = append(volumes, volumeFrom)
+			result = append(result, volumeFrom)
 		}
 	}
-	return volumes, nil
+	return result, nil
 }
 
 func parseDevices(devices []string) ([]container.DeviceMapping, error) {
-	// parse device mappings
 	deviceMappings := []container.DeviceMapping{}
 	for _, device := range devices {
 		v, err := opts.ParseDevice(device)
@@ -238,6 +250,5 @@ func parseDevices(devices []string) ([]container.DeviceMapping, error) {
 			CgroupPermissions: v.CgroupPermissions,
 		})
 	}
-
 	return deviceMappings, nil
 }

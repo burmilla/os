@@ -7,8 +7,6 @@ import (
 	"io"
 	"reflect"
 	"sort"
-
-	"github.com/burmilla/os/pkg/libcompose/yaml"
 )
 
 // GetServiceHash computes and returns a hash that will identify a service.
@@ -47,42 +45,19 @@ func GetServiceHash(name string, config *ServiceConfig) string {
 		io.WriteString(hash, fmt.Sprintf("\n  %v: ", serviceKey))
 
 		switch s := serviceValue.(type) {
-		case yaml.SliceorMap:
+		case map[string]string:
 			sliceKeys := []string{}
 			for lkey := range s {
 				sliceKeys = append(sliceKeys, lkey)
 			}
 			sort.Strings(sliceKeys)
-
 			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s=%v, ", sliceKey, s[sliceKey]))
 			}
-		case yaml.MaporEqualSlice:
-			for _, sliceKey := range s {
-				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
-			}
-		case yaml.MaporColonSlice:
-			for _, sliceKey := range s {
-				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
-			}
-		case yaml.MaporSpaceSlice:
-			for _, sliceKey := range s {
-				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
-			}
-		case yaml.Command:
-			for _, sliceKey := range s {
-				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
-			}
-		case yaml.Stringorslice:
-			sort.Strings(s)
-
-			for _, sliceKey := range s {
-				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
-			}
 		case []string:
-			sliceKeys := s
+			sliceKeys := make([]string, len(s))
+			copy(sliceKeys, s)
 			sort.Strings(sliceKeys)
-
 			for _, sliceKey := range sliceKeys {
 				io.WriteString(hash, fmt.Sprintf("%s, ", sliceKey))
 			}

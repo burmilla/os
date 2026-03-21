@@ -503,7 +503,8 @@ func (s *Service) Containers(ctx context.Context) ([]project.Container, error) {
 }
 
 func (s *Service) specificiesHostPort() bool {
-	_, bindings, err := nat.ParsePortSpecs(s.Config().Ports)
+	portStrs := config.PortsToStringSlice(s.Config().Ports)
+	_, bindings, err := nat.ParsePortSpecs(portStrs)
 
 	if err != nil {
 		fmt.Println(err)
