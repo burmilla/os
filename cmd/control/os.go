@@ -16,10 +16,10 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
+	composetypes "github.com/compose-spec/compose-go/types"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
 	dockerClient "github.com/docker/engine-api/client"
-	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
@@ -272,16 +272,16 @@ func startUpgradeContainer(image string, stage, force, reboot, kexec, upgradeCon
 		os.Exit(1)
 	}
 
-	container, err := compose.CreateService(nil, "os-upgrade", &composeConfig.ServiceConfigV1{
+	container, err := compose.CreateService(nil, "os-upgrade", &composetypes.ServiceConfig{
 		LogDriver:  "json-file",
 		Privileged: true,
 		Net:        "host",
 		Pid:        "host",
 		Image:      image,
-		Labels: map[string]string{
+		Labels: composetypes.Labels{
 			config.ScopeLabel: config.System,
 		},
-		Command: command,
+		Command: composetypes.ShellCommand(command),
 	})
 	if err != nil {
 		return err
