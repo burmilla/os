@@ -128,31 +128,53 @@ func ServiceConfigV1ToServiceConfig(v1 *ServiceConfigV1) *composetypes.ServiceCo
 		WorkingDir:    v1.WorkingDir,
 	}
 
-	if v1.LogDriver != "" || v1.LogOpt != nil {
-		sc.Logging = &composetypes.LoggingConfig{
-			Driver:  v1.LogDriver,
-			Options: v1.LogOpt,
-		}
-	}
-
-	if v1.Build != "" {
-		sc.Build = &composetypes.BuildConfig{
-			Context:    v1.Build,
-			Dockerfile: v1.Dockerfile,
-		}
-	}
-
-	if v1.Ulimits.Elements != nil {
-		sc.Ulimits = make(map[string]*composetypes.UlimitsConfig)
-		for _, u := range v1.Ulimits.Elements {
-			sc.Ulimits[u.Name] = &composetypes.UlimitsConfig{
-				Soft: int(u.Soft),
-				Hard: int(u.Hard),
-			}
-		}
-	}
+	// Pointer fields: compose-go uses pointers for Logging, Build, and Ulimits
+	// so they must only be set when the v1 config actually specifies them.
+	sc.Logging = convertLogging(v1)
+	sc.Build = convertBuild(v1)
+	sc.Ulimits = convertUlimits(v1)
 
 	return sc
+}
+
+// convertLogging creates a LoggingConfig pointer from v1 log settings.
+// Returns nil if no logging configuration was specified.
+func convertLogging(v1 *ServiceConfigV1) *composetypes.LoggingConfig {
+	if v1.LogDriver == "" && v1.LogOpt == nil {
+		return nil
+	}
+	return &composetypes.LoggingConfig{
+		Driver:  v1.LogDriver,
+		Options: v1.LogOpt,
+	}
+}
+
+// convertBuild creates a BuildConfig pointer from the v1 build path.
+// Returns nil if no build context was specified.
+func convertBuild(v1 *ServiceConfigV1) *composetypes.BuildConfig {
+	if v1.Build == "" {
+		return nil
+	}
+	return &composetypes.BuildConfig{
+		Context:    v1.Build,
+		Dockerfile: v1.Dockerfile,
+	}
+}
+
+// convertUlimits converts v1 ulimit definitions to the compose-go map format.
+// Returns nil if no ulimits were specified.
+func convertUlimits(v1 *ServiceConfigV1) map[string]*composetypes.UlimitsConfig {
+	if v1.Ulimits.Elements == nil {
+		return nil
+	}
+	ulimits := make(map[string]*composetypes.UlimitsConfig, len(v1.Ulimits.Elements))
+	for _, u := range v1.Ulimits.Elements {
+		ulimits[u.Name] = &composetypes.UlimitsConfig{
+			Soft: int(u.Soft),
+			Hard: int(u.Hard),
+		}
+	}
+	return ulimits
 }
 
 // ConvertV1Services converts a map of v1 service configs to compose-go ServiceConfigs.
@@ -255,32 +277,31 @@ func stringSliceToPortConfigs(ports []string) []composetypes.ServicePortConfig {
 	return result
 }
 
+// parsePortString parses a Docker port specification string into a ServicePortConfig.
+// Supported formats:
+//   - "containerPort"                  (e.g. "80")
+//   - "hostPort:containerPort"         (e.g. "8080:80")
+//   - "ip:hostPort:containerPort"      (e.g. "127.0.0.1:8080:80")
+//
+// An optional "/protocol" suffix (tcp or udp) may be appended to any format.
 func parsePortString(s string) composetypes.ServicePortConfig {
-	// Simple parse: handle "hostPort:containerPort" and "containerPort"
-	pc := composetypes.ServicePortConfig{
-		Protocol: "tcp",
-	}
+	pc := composetypes.ServicePortConfig{Protocol: "tcp"}
 
-	// Check for protocol suffix first
-	proto := "tcp"
+	// Strip optional protocol suffix (e.g. "/udp")
 	portPart := s
 	if idx := strings.LastIndex(s, "/"); idx >= 0 {
-		proto = s[idx+1:]
+		pc.Protocol = s[idx+1:]
 		portPart = s[:idx]
 	}
-	pc.Protocol = proto
 
 	parts := strings.SplitN(portPart, ":", 3)
 	switch len(parts) {
 	case 1:
-		// "containerPort"
 		fmt.Sscanf(parts[0], "%d", &pc.Target)
 	case 2:
-		// "hostPort:containerPort"
 		pc.Published = parts[0]
 		fmt.Sscanf(parts[1], "%d", &pc.Target)
 	case 3:
-		// "ip:hostPort:containerPort"
 		pc.HostIP = parts[0]
 		pc.Published = parts[1]
 		fmt.Sscanf(parts[2], "%d", &pc.Target)
@@ -312,6 +333,11 @@ func stringSliceToVolumeConfigs(volumes []string) []composetypes.ServiceVolumeCo
 	return result
 }
 
+// parseVolumeString parses a Docker volume specification string into a ServiceVolumeConfig.
+// Supported formats:
+//   - "target"                  (container path only; named volume if not an absolute/relative path)
+//   - "source:target"           (bind mount)
+//   - "source:target:ro"        (read-only bind mount)
 func parseVolumeString(s string) composetypes.ServiceVolumeConfig {
 	parts := strings.SplitN(s, ":", 3)
 	vc := composetypes.ServiceVolumeConfig{
@@ -321,7 +347,8 @@ func parseVolumeString(s string) composetypes.ServiceVolumeConfig {
 	switch len(parts) {
 	case 1:
 		vc.Target = parts[0]
-		if !strings.HasPrefix(parts[0], "/") && !strings.HasPrefix(parts[0], ".") {
+		// A bare name (not starting with / or .) is a named volume, not a bind mount
+		if !isPathLike(parts[0]) {
 			vc.Type = composetypes.VolumeTypeVolume
 			vc.Source = parts[0]
 		}
@@ -337,6 +364,11 @@ func parseVolumeString(s string) composetypes.ServiceVolumeConfig {
 	}
 
 	return vc
+}
+
+// isPathLike returns true if s looks like a filesystem path (absolute or relative).
+func isPathLike(s string) bool {
+	return strings.HasPrefix(s, "/") || strings.HasPrefix(s, ".")
 }
 
 func volumeConfigToString(v composetypes.ServiceVolumeConfig) string {

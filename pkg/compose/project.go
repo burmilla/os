@@ -113,19 +113,17 @@ func newProject(name string, cfg *config.CloudConfig, environmentLookup composeC
 	})
 }
 
+// preprocessServiceMap converts all values in "environment" and "labels" keys
+// to strings, which is required for proper variable interpolation. Other keys
+// are left as-is to preserve their original types (int, bool, etc.).
 func preprocessServiceMap(serviceMap composeConfig.RawServiceMap) (composeConfig.RawServiceMap, error) {
 	newServiceMap := make(composeConfig.RawServiceMap)
 
-	for k, v := range serviceMap {
-		newServiceMap[k] = make(composeConfig.RawService)
-
-		for k2, v2 := range v {
-			if k2 == "environment" || k2 == "labels" {
-				newServiceMap[k][k2] = preprocess(v2, true)
-			} else {
-				newServiceMap[k][k2] = preprocess(v2, false)
-			}
-
+	for serviceName, service := range serviceMap {
+		newServiceMap[serviceName] = make(composeConfig.RawService)
+		for key, value := range service {
+			stringifyValues := key == "environment" || key == "labels"
+			newServiceMap[serviceName][key] = preprocess(value, stringifyValues)
 		}
 	}
 
@@ -161,14 +159,17 @@ func preprocess(item interface{}, replaceTypes bool) interface{} {
 	}
 }
 
+// addServices converts v1 service configs and adds them to the project.
+// It uses content hashing to skip services whose config has not changed,
+// avoiding unnecessary service recreation during reloads.
 func addServices(p *project.Project, enabled map[interface{}]interface{}, configs map[string]*composeConfig.ServiceConfigV1) map[interface{}]interface{} {
 	serviceConfigsV2, _ := composeConfig.ConvertServices(configs)
 
-	// Note: we ignore errors while loading services
-	unchanged := true
+	mapCopied := false
 	for name, serviceConfig := range serviceConfigsV2 {
 		hash := composeConfig.GetServiceHash(name, serviceConfig)
 
+		// Skip if this service's config hash hasn't changed since last load
 		if enabled[name] == hash {
 			continue
 		}
@@ -178,9 +179,10 @@ func addServices(p *project.Project, enabled map[interface{}]interface{}, config
 			continue
 		}
 
-		if unchanged {
+		// Copy-on-write: only copy the map when we first need to modify it
+		if !mapCopied {
 			enabled = util.MapCopy(enabled)
-			unchanged = false
+			mapCopied = true
 		}
 		enabled[name] = hash
 	}
