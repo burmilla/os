@@ -23,8 +23,8 @@ func DefaultDependentServices(p *Project, s Service) []ServiceRelationship {
 		result = append(result, NewServiceRelationship(volumesFrom, RelTypeVolumesFrom))
 	}
 
-	for _, dependsOn := range config.DependsOn {
-		result = append(result, NewServiceRelationship(dependsOn, RelTypeDependsOn))
+	for depName := range config.DependsOn {
+		result = append(result, NewServiceRelationship(depName, RelTypeDependsOn))
 	}
 
 	result = appendNs(p, result, s.Config().NetworkMode, RelTypeNetNamespace)
