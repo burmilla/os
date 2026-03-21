@@ -1,8 +1,8 @@
 package docker
 
 import (
-	"github.com/docker/docker/cliconfig"
 	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/docker/docker/cliconfig"
 )
 
 // Context holds context meta information about a libcompose project and docker

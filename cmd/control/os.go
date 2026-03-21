@@ -16,11 +16,11 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
-	composetypes "github.com/compose-spec/compose-go/types"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
+	composetypes "github.com/compose-spec/compose-go/types"
 	dockerClient "github.com/docker/engine-api/client"
-	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 

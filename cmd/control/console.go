@@ -13,10 +13,10 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
-	composetypes "github.com/compose-spec/compose-go/types"
-	"github.com/codegangsta/cli"
-	"github.com/docker/docker/reference"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
+	"github.com/codegangsta/cli"
+	composetypes "github.com/compose-spec/compose-go/types"
+	"github.com/docker/docker/reference"
 	"golang.org/x/net/context"
 )
 

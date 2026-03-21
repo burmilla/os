@@ -7,14 +7,14 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/docker/engine-api/types"
-	"github.com/docker/engine-api/types/filters"
 	"github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/labels"
 	"github.com/burmilla/os/pkg/libcompose/logger"
 	"github.com/burmilla/os/pkg/libcompose/project/events"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"github.com/burmilla/os/pkg/libcompose/utils"
+	"github.com/docker/engine-api/types"
+	"github.com/docker/engine-api/types/filters"
 	log "github.com/sirupsen/logrus"
 )
 

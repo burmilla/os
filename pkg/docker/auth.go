@@ -8,9 +8,9 @@ import (
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
 
+	"github.com/burmilla/os/pkg/libcompose/docker"
 	"github.com/docker/docker/registry"
 	"github.com/docker/engine-api/types"
-	"github.com/burmilla/os/pkg/libcompose/docker"
 )
 
 // ConfigAuthLookup will lookup registry auth info from cloud config

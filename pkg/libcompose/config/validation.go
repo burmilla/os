@@ -254,7 +254,7 @@ func validate(serviceMap RawServiceMap) error {
 			}
 		}
 
-		return fmt.Errorf(strings.Join(validationErrors, "\n"))
+		return fmt.Errorf("%s", strings.Join(validationErrors, "\n"))
 	}
 
 	return nil
@@ -293,7 +293,7 @@ func validateServiceConstraints(service RawService, serviceName string) error {
 			}
 		}
 
-		return fmt.Errorf(strings.Join(validationErrors, "\n"))
+		return fmt.Errorf("%s", strings.Join(validationErrors, "\n"))
 	}
 
 	return nil

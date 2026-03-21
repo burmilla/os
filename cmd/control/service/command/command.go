@@ -5,8 +5,8 @@ import (
 
 	"github.com/burmilla/os/cmd/control/service/app"
 
-	"github.com/codegangsta/cli"
 	composeApp "github.com/burmilla/os/pkg/libcompose/cli/app"
+	"github.com/codegangsta/cli"
 )
 
 func verifyOneOrMoreServices(c *cli.Context) error {

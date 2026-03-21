@@ -11,9 +11,6 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
-	composetypes "github.com/compose-spec/compose-go/types"
-	yaml "github.com/cloudfoundry-incubator/candiedyaml"
-	dockerClient "github.com/docker/engine-api/client"
 	"github.com/burmilla/os/pkg/libcompose/cli/logger"
 	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/docker"
@@ -21,6 +18,9 @@ import (
 	"github.com/burmilla/os/pkg/libcompose/project"
 	"github.com/burmilla/os/pkg/libcompose/project/events"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
+	yaml "github.com/cloudfoundry-incubator/candiedyaml"
+	composetypes "github.com/compose-spec/compose-go/types"
+	dockerClient "github.com/docker/engine-api/client"
 	"golang.org/x/net/context"
 )
 

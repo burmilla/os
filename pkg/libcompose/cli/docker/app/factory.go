@@ -3,10 +3,10 @@ package app
 import (
 	"os"
 
-	"github.com/codegangsta/cli"
 	"github.com/burmilla/os/pkg/libcompose/cli/logger"
 	"github.com/burmilla/os/pkg/libcompose/docker"
 	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/codegangsta/cli"
 )
 
 // ProjectFactory is a struct that holds the app.ProjectFactory implementation.

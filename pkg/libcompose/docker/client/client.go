@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/burmilla/os/pkg/libcompose/version"
 	"github.com/docker/docker/cliconfig"
 	"github.com/docker/docker/pkg/homedir"
 	"github.com/docker/engine-api/client"
 	"github.com/docker/go-connections/sockets"
 	"github.com/docker/go-connections/tlsconfig"
-	"github.com/burmilla/os/pkg/libcompose/version"
 )
 
 const (

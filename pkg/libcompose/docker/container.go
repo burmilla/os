@@ -9,6 +9,12 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/labels"
+	"github.com/burmilla/os/pkg/libcompose/logger"
+	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/burmilla/os/pkg/libcompose/project/events"
+	util "github.com/burmilla/os/pkg/libcompose/utils"
 	"github.com/docker/docker/pkg/promise"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/docker/pkg/term"
@@ -17,12 +23,6 @@ import (
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/network"
 	"github.com/docker/go-connections/nat"
-	"github.com/burmilla/os/pkg/libcompose/config"
-	"github.com/burmilla/os/pkg/libcompose/labels"
-	"github.com/burmilla/os/pkg/libcompose/logger"
-	"github.com/burmilla/os/pkg/libcompose/project"
-	"github.com/burmilla/os/pkg/libcompose/project/events"
-	util "github.com/burmilla/os/pkg/libcompose/utils"
 	"github.com/sirupsen/logrus"
 )
 
