@@ -11,10 +11,10 @@ import (
 	"github.com/docker/docker/layer"
 	dockerclient "github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/docker"
-	"github.com/docker/libcompose/project"
-	"github.com/docker/libcompose/project/options"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/docker"
+	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 

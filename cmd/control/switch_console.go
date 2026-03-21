@@ -8,7 +8,7 @@ import (
 	"github.com/burmilla/os/pkg/log"
 
 	"github.com/codegangsta/cli"
-	"github.com/docker/libcompose/project/options"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 

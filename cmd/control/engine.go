@@ -25,9 +25,9 @@ import (
 	"github.com/docker/docker/reference"
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/project/options"
-	composeYaml "github.com/docker/libcompose/yaml"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
+	composeYaml "github.com/burmilla/os/pkg/libcompose/yaml"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )

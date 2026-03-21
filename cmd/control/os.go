@@ -19,8 +19,8 @@ import (
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
 	dockerClient "github.com/docker/engine-api/client"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/project/options"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 

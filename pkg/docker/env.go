@@ -7,7 +7,7 @@ import (
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
 
-	composeConfig "github.com/docker/libcompose/config"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 )
 
 type ConfigEnvironment struct {
