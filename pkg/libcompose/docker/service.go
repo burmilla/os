@@ -8,14 +8,14 @@ import (
 	"github.com/docker/engine-api/types/network"
 	"golang.org/x/net/context"
 
-	"github.com/docker/engine-api/client"
-	"github.com/docker/go-connections/nat"
 	"github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/docker/builder"
 	"github.com/burmilla/os/pkg/libcompose/labels"
 	"github.com/burmilla/os/pkg/libcompose/project"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"github.com/burmilla/os/pkg/libcompose/utils"
+	"github.com/docker/engine-api/client"
+	"github.com/docker/go-connections/nat"
 	"github.com/sirupsen/logrus"
 )
 

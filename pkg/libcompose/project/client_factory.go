@@ -1,8 +1,8 @@
 package project
 
 import (
-	"github.com/docker/engine-api/client"
 	composeclient "github.com/burmilla/os/pkg/libcompose/docker/client"
+	"github.com/docker/engine-api/client"
 )
 
 // ClientFactory is a factory to create docker clients.

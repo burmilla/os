@@ -3,8 +3,8 @@ package config
 import (
 	"sync"
 
-	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/burmilla/os/pkg/libcompose/yaml"
+	composetypes "github.com/compose-spec/compose-go/types"
 )
 
 // ServiceConfig is an alias for compose-go's ServiceConfig.

@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/burmilla/os/pkg/libcompose/utils"
 	"github.com/docker/docker/runconfig/opts"
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/network"
 	"github.com/docker/engine-api/types/strslice"
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
-	"github.com/burmilla/os/pkg/libcompose/config"
-	"github.com/burmilla/os/pkg/libcompose/project"
-	"github.com/burmilla/os/pkg/libcompose/utils"
 )
 
 // ConfigWrapper wraps Config, HostConfig and NetworkingConfig for a container.

@@ -11,9 +11,9 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
-	"github.com/codegangsta/cli"
 	dockerApp "github.com/burmilla/os/pkg/libcompose/cli/docker/app"
 	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/codegangsta/cli"
 )
 
 type projectFactory struct {

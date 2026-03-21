@@ -15,9 +15,9 @@ import (
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/docker/engine-api/types"
-	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/xeipuuv/gojsonschema"
 )
 

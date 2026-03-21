@@ -1,8 +1,8 @@
 package app
 
 import (
-	"github.com/codegangsta/cli"
 	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/codegangsta/cli"
 )
 
 // ProjectFactory is an interface that helps creating libcompose project.

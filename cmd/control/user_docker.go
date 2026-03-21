@@ -15,9 +15,9 @@ import (
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
-	"github.com/codegangsta/cli"
 	composeClient "github.com/burmilla/os/pkg/libcompose/docker/client"
 	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/codegangsta/cli"
 	"golang.org/x/net/context"
 )
 

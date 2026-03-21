@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"path"
 
-	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/burmilla/os/pkg/libcompose/utils"
+	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/sirupsen/logrus"
 )
 

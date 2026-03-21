@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"text/template"
 
-	"github.com/codegangsta/cli"
 	"github.com/burmilla/os/pkg/libcompose/version"
+	"github.com/codegangsta/cli"
 	"github.com/sirupsen/logrus"
 )
 

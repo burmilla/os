@@ -6,10 +6,10 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/burmilla/os/pkg/libcompose/labels"
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
-	"github.com/burmilla/os/pkg/libcompose/labels"
 )
 
 const format = "%s_%s_%d"

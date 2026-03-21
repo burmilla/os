@@ -20,13 +20,13 @@ import (
 	"github.com/burmilla/os/pkg/util/network"
 	"github.com/burmilla/os/pkg/util/versions"
 
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/reference"
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
-	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
-	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
