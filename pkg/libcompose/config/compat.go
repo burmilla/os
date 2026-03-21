@@ -1,3 +1,18 @@
+// Package config provides service configuration types and conversion utilities.
+//
+// Backward compatibility:
+//
+// This package maintains full backward compatibility with existing BurmillaOS
+// cloud-config YAML files. The ServiceConfigV1 type is preserved for
+// deserialization via candiedyaml, and ServiceConfigV1ToServiceConfig converts
+// it to the new compose-go ServiceConfig without changing any field semantics.
+//
+// Existing cloud-config keys (image, ports, volumes, environment, labels, etc.)
+// continue to work identically. No migration steps are required for upgrades.
+//
+// The only behavioral change is that clearly invalid configurations (e.g. empty
+// volume specs, malformed port strings) are now detected early and logged rather
+// than causing obscure failures later in the boot process.
 package config
 
 import (
