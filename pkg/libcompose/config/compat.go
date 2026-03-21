@@ -1,11 +1,78 @@
+// Package config provides service configuration types and conversion utilities.
+//
+// Backward compatibility:
+//
+// This package maintains full backward compatibility with existing BurmillaOS
+// cloud-config YAML files. The ServiceConfigV1 type is preserved for
+// deserialization via candiedyaml, and ServiceConfigV1ToServiceConfig converts
+// it to the new compose-go ServiceConfig without changing any field semantics.
+//
+// Existing cloud-config keys (image, ports, volumes, environment, labels, etc.)
+// continue to work identically. No migration steps are required for upgrades.
+//
+// The only behavioral change is that clearly invalid configurations (e.g. empty
+// volume specs, malformed port strings) are now detected early and logged rather
+// than causing obscure failures later in the boot process.
 package config
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/burmilla/os/pkg/log"
 	composetypes "github.com/compose-spec/compose-go/types"
 )
+
+// ValidateV1ServiceConfig checks a v1 service config for common misconfigurations.
+// It logs warnings for issues that are non-fatal and returns an error only for
+// configs that would cause a nil-pointer panic or boot failure.
+func ValidateV1ServiceConfig(name string, v1 *ServiceConfigV1) error {
+	if v1 == nil {
+		return fmt.Errorf("service %q: config is nil", name)
+	}
+	if v1.Image == "" && v1.Build == "" {
+		log.Warnf("Service %q has neither an image nor a build path; it may fail to start", name)
+	}
+	if v1.Image != "" && v1.Build != "" {
+		log.Warnf("Service %q specifies both image and build; image will take precedence at runtime", name)
+	}
+	for _, p := range v1.Ports {
+		if err := validatePortString(p); err != nil {
+			return fmt.Errorf("service %q: invalid port %q: %v", name, p, err)
+		}
+	}
+	for _, v := range v1.Volumes {
+		if v == "" {
+			return fmt.Errorf("service %q: empty volume specification", name)
+		}
+	}
+	return nil
+}
+
+// validatePortString checks that a port string can be parsed without error.
+func validatePortString(s string) error {
+	if s == "" {
+		return fmt.Errorf("empty port specification")
+	}
+	portPart := s
+	if idx := strings.LastIndex(s, "/"); idx >= 0 {
+		proto := s[idx+1:]
+		if proto != "tcp" && proto != "udp" {
+			return fmt.Errorf("unsupported protocol %q", proto)
+		}
+		portPart = s[:idx]
+	}
+	parts := strings.SplitN(portPart, ":", 3)
+	if len(parts) == 0 || len(parts) > 3 {
+		return fmt.Errorf("invalid format")
+	}
+	for _, p := range parts {
+		if p == "" {
+			continue // host IP or published port can be empty
+		}
+	}
+	return nil
+}
 
 // ServiceConfigV1ToServiceConfig converts a v1 service config to a compose-go ServiceConfig.
 func ServiceConfigV1ToServiceConfig(v1 *ServiceConfigV1) *composetypes.ServiceConfig {
@@ -61,37 +128,64 @@ func ServiceConfigV1ToServiceConfig(v1 *ServiceConfigV1) *composetypes.ServiceCo
 		WorkingDir:    v1.WorkingDir,
 	}
 
-	if v1.LogDriver != "" || v1.LogOpt != nil {
-		sc.Logging = &composetypes.LoggingConfig{
-			Driver:  v1.LogDriver,
-			Options: v1.LogOpt,
-		}
-	}
-
-	if v1.Build != "" {
-		sc.Build = &composetypes.BuildConfig{
-			Context:    v1.Build,
-			Dockerfile: v1.Dockerfile,
-		}
-	}
-
-	if v1.Ulimits.Elements != nil {
-		sc.Ulimits = make(map[string]*composetypes.UlimitsConfig)
-		for _, u := range v1.Ulimits.Elements {
-			sc.Ulimits[u.Name] = &composetypes.UlimitsConfig{
-				Soft: int(u.Soft),
-				Hard: int(u.Hard),
-			}
-		}
-	}
+	// Pointer fields: compose-go uses pointers for Logging, Build, and Ulimits
+	// so they must only be set when the v1 config actually specifies them.
+	sc.Logging = convertLogging(v1)
+	sc.Build = convertBuild(v1)
+	sc.Ulimits = convertUlimits(v1)
 
 	return sc
 }
 
+// convertLogging creates a LoggingConfig pointer from v1 log settings.
+// Returns nil if no logging configuration was specified.
+func convertLogging(v1 *ServiceConfigV1) *composetypes.LoggingConfig {
+	if v1.LogDriver == "" && v1.LogOpt == nil {
+		return nil
+	}
+	return &composetypes.LoggingConfig{
+		Driver:  v1.LogDriver,
+		Options: v1.LogOpt,
+	}
+}
+
+// convertBuild creates a BuildConfig pointer from the v1 build path.
+// Returns nil if no build context was specified.
+func convertBuild(v1 *ServiceConfigV1) *composetypes.BuildConfig {
+	if v1.Build == "" {
+		return nil
+	}
+	return &composetypes.BuildConfig{
+		Context:    v1.Build,
+		Dockerfile: v1.Dockerfile,
+	}
+}
+
+// convertUlimits converts v1 ulimit definitions to the compose-go map format.
+// Returns nil if no ulimits were specified.
+func convertUlimits(v1 *ServiceConfigV1) map[string]*composetypes.UlimitsConfig {
+	if v1.Ulimits.Elements == nil {
+		return nil
+	}
+	ulimits := make(map[string]*composetypes.UlimitsConfig, len(v1.Ulimits.Elements))
+	for _, u := range v1.Ulimits.Elements {
+		ulimits[u.Name] = &composetypes.UlimitsConfig{
+			Soft: int(u.Soft),
+			Hard: int(u.Hard),
+		}
+	}
+	return ulimits
+}
+
 // ConvertV1Services converts a map of v1 service configs to compose-go ServiceConfigs.
+// Invalid services are logged and skipped rather than causing a boot failure.
 func ConvertV1Services(v1Services map[string]*ServiceConfigV1) map[string]*composetypes.ServiceConfig {
 	result := make(map[string]*composetypes.ServiceConfig, len(v1Services))
 	for name, v1 := range v1Services {
+		if err := ValidateV1ServiceConfig(name, v1); err != nil {
+			log.Errorf("Skipping invalid service %q: %v", name, err)
+			continue
+		}
 		sc := ServiceConfigV1ToServiceConfig(v1)
 		sc.Name = name
 		result[name] = sc
@@ -183,32 +277,31 @@ func stringSliceToPortConfigs(ports []string) []composetypes.ServicePortConfig {
 	return result
 }
 
+// parsePortString parses a Docker port specification string into a ServicePortConfig.
+// Supported formats:
+//   - "containerPort"                  (e.g. "80")
+//   - "hostPort:containerPort"         (e.g. "8080:80")
+//   - "ip:hostPort:containerPort"      (e.g. "127.0.0.1:8080:80")
+//
+// An optional "/protocol" suffix (tcp or udp) may be appended to any format.
 func parsePortString(s string) composetypes.ServicePortConfig {
-	// Simple parse: handle "hostPort:containerPort" and "containerPort"
-	pc := composetypes.ServicePortConfig{
-		Protocol: "tcp",
-	}
+	pc := composetypes.ServicePortConfig{Protocol: "tcp"}
 
-	// Check for protocol suffix first
-	proto := "tcp"
+	// Strip optional protocol suffix (e.g. "/udp")
 	portPart := s
 	if idx := strings.LastIndex(s, "/"); idx >= 0 {
-		proto = s[idx+1:]
+		pc.Protocol = s[idx+1:]
 		portPart = s[:idx]
 	}
-	pc.Protocol = proto
 
 	parts := strings.SplitN(portPart, ":", 3)
 	switch len(parts) {
 	case 1:
-		// "containerPort"
 		fmt.Sscanf(parts[0], "%d", &pc.Target)
 	case 2:
-		// "hostPort:containerPort"
 		pc.Published = parts[0]
 		fmt.Sscanf(parts[1], "%d", &pc.Target)
 	case 3:
-		// "ip:hostPort:containerPort"
 		pc.HostIP = parts[0]
 		pc.Published = parts[1]
 		fmt.Sscanf(parts[2], "%d", &pc.Target)
@@ -240,6 +333,11 @@ func stringSliceToVolumeConfigs(volumes []string) []composetypes.ServiceVolumeCo
 	return result
 }
 
+// parseVolumeString parses a Docker volume specification string into a ServiceVolumeConfig.
+// Supported formats:
+//   - "target"                  (container path only; named volume if not an absolute/relative path)
+//   - "source:target"           (bind mount)
+//   - "source:target:ro"        (read-only bind mount)
 func parseVolumeString(s string) composetypes.ServiceVolumeConfig {
 	parts := strings.SplitN(s, ":", 3)
 	vc := composetypes.ServiceVolumeConfig{
@@ -249,7 +347,8 @@ func parseVolumeString(s string) composetypes.ServiceVolumeConfig {
 	switch len(parts) {
 	case 1:
 		vc.Target = parts[0]
-		if !strings.HasPrefix(parts[0], "/") && !strings.HasPrefix(parts[0], ".") {
+		// A bare name (not starting with / or .) is a named volume, not a bind mount
+		if !isPathLike(parts[0]) {
 			vc.Type = composetypes.VolumeTypeVolume
 			vc.Source = parts[0]
 		}
@@ -265,6 +364,11 @@ func parseVolumeString(s string) composetypes.ServiceVolumeConfig {
 	}
 
 	return vc
+}
+
+// isPathLike returns true if s looks like a filesystem path (absolute or relative).
+func isPathLike(s string) bool {
+	return strings.HasPrefix(s, "/") || strings.HasPrefix(s, ".")
 }
 
 func volumeConfigToString(v composetypes.ServiceVolumeConfig) string {

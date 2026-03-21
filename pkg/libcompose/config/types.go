@@ -9,6 +9,16 @@ import (
 
 // ServiceConfig is an alias for compose-go's ServiceConfig.
 // This is the canonical service configuration type used throughout BurmillaOS.
+//
+// Migration note: this replaces the former libcompose ServiceConfig struct.
+// Key differences from the old type:
+//   - Logging is now *LoggingConfig (pointer); use config.LoggingDriver() /
+//     config.LoggingOptions() helpers for nil-safe access.
+//   - Build is now *BuildConfig (pointer); check for nil before accessing.
+//   - Ports are []ServicePortConfig instead of []string; use config.PortsToStringSlice()
+//     when a string slice is needed.
+//   - Volumes are []ServiceVolumeConfig instead of []string; use config.VolumesToStringSlice().
+//   - Environment is MappingWithEquals instead of []string; use config.EnvironmentToSlice().
 type ServiceConfig = composetypes.ServiceConfig
 
 // EnvironmentLookup defines methods to provides environment variable loading.
