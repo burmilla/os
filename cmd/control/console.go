@@ -15,8 +15,8 @@ import (
 
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/reference"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/project/options"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 

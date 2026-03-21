@@ -13,7 +13,7 @@ import (
 	"github.com/burmilla/os/pkg/log"
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
-	composeConfig "github.com/docker/libcompose/config"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 )
 
 var (

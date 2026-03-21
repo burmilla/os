@@ -13,13 +13,13 @@ import (
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	dockerClient "github.com/docker/engine-api/client"
-	"github.com/docker/libcompose/cli/logger"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/docker"
-	composeClient "github.com/docker/libcompose/docker/client"
-	"github.com/docker/libcompose/project"
-	"github.com/docker/libcompose/project/events"
-	"github.com/docker/libcompose/project/options"
+	"github.com/burmilla/os/pkg/libcompose/cli/logger"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/docker"
+	composeClient "github.com/burmilla/os/pkg/libcompose/docker/client"
+	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/burmilla/os/pkg/libcompose/project/events"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 

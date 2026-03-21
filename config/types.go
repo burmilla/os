@@ -9,7 +9,7 @@ import (
 	"github.com/burmilla/os/pkg/netconf"
 
 	"github.com/docker/engine-api/types"
-	composeConfig "github.com/docker/libcompose/config"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 )
 
 const (

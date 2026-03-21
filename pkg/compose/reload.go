@@ -9,8 +9,8 @@ import (
 	"github.com/burmilla/os/pkg/util/network"
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/project"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project"
 )
 
 func LoadService(p *project.Project, cfg *config.CloudConfig, useNetwork bool, service string) error {

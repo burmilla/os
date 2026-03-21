@@ -8,8 +8,8 @@ import (
 	"github.com/burmilla/os/pkg/netconf"
 	"github.com/burmilla/os/pkg/sysinit"
 
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/yaml"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/yaml"
 )
 
 var (

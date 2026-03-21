@@ -3,9 +3,9 @@ package docker
 import (
 	"github.com/burmilla/os/pkg/util"
 
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/docker"
-	"github.com/docker/libcompose/project"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/docker"
+	"github.com/burmilla/os/pkg/libcompose/project"
 )
 
 type ServiceFactory struct {

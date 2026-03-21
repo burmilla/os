@@ -17,7 +17,7 @@ import (
 
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/docker/engine-api/types"
-	composeConfig "github.com/docker/libcompose/config"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/xeipuuv/gojsonschema"
 )
 

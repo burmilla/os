@@ -10,7 +10,7 @@ import (
 
 	"github.com/docker/docker/registry"
 	"github.com/docker/engine-api/types"
-	"github.com/docker/libcompose/docker"
+	"github.com/burmilla/os/pkg/libcompose/docker"
 )
 
 // ConfigAuthLookup will lookup registry auth info from cloud config
