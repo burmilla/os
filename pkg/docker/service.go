@@ -40,10 +40,15 @@ func (s *Service) DependentServices() []project.ServiceRelationship {
 		rels = appendLink(rels, dep, true, s.project)
 	}
 
+	// Auto-depend on syslog if the service uses the syslog log driver.
+	// appendLink is a no-op if the "syslog" service is not registered,
+	// so this is safe in minimal/custom configurations.
 	if s.requiresSyslog() {
 		rels = appendLink(rels, "syslog", false, s.project)
 	}
 
+	// Non-system services depend on the user docker daemon.
+	// If the image is missing locally, depend on network instead so it can be pulled.
 	if s.requiresUserDocker() {
 		rels = appendLink(rels, "docker", false, s.project)
 	} else if s.missingImage() {

@@ -52,13 +52,17 @@ func LoadService(p *project.Project, cfg *config.CloudConfig, useNetwork bool, s
 }
 
 func LoadSpecialService(p *project.Project, cfg *config.CloudConfig, serviceName, serviceValue string) error {
-	// Save config in case load fails
+	if serviceValue == "" {
+		return fmt.Errorf("empty service value for %q", serviceName)
+	}
+
+	// Save config in case load fails so we can roll back
 	previousConfig, ok := p.ServiceConfigs.Get(serviceName)
 
 	p.ServiceConfigs.Add(serviceName, &composeConfig.ServiceConfig{})
 
 	if err := LoadService(p, cfg, true, serviceValue); err != nil {
-		// Rollback to previous config
+		// Rollback to previous config to avoid leaving an empty placeholder
 		if ok {
 			p.ServiceConfigs.Add(serviceName, previousConfig)
 		}
