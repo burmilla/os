@@ -13,9 +13,9 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
+	composetypes "github.com/compose-spec/compose-go/types"
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/reference"
-	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"golang.org/x/net/context"
 )
@@ -84,16 +84,16 @@ func consoleSwitch(c *cli.Context) error {
 		}
 	}
 
-	service, err := compose.CreateService(nil, "switch-console", &composeConfig.ServiceConfigV1{
+	service, err := compose.CreateService(nil, "switch-console", &composetypes.ServiceConfig{
 		LogDriver:  "json-file",
 		Privileged: true,
 		Net:        "host",
 		Pid:        "host",
 		Image:      config.OsBase,
-		Labels: map[string]string{
+		Labels: composetypes.Labels{
 			config.ScopeLabel: config.System,
 		},
-		Command:     []string{"/usr/bin/ros", "switch-console", newConsole},
+		Command:     composetypes.ShellCommand{"/usr/bin/ros", "switch-console", newConsole},
 		VolumesFrom: []string{"all-volumes"},
 	})
 	if err != nil {
