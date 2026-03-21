@@ -59,22 +59,37 @@ func (s *Service) missingImage() bool {
 	}
 	client := s.context.ClientFactory.Create(s)
 
-	// If it is already built-in, we should use tag image
-	// use case: open-vmtools with another REGISTRY_DOMAIN setting
-	registryDomain := config.LoadConfig().Rancher.Environment["REGISTRY_DOMAIN"]
-	if registryDomain != "docker.io" && strings.Index(image, registryDomain) >= 0 {
-		orginImage := strings.SplitN(image, "/", 2)[1]
-		_, _, err := client.ImageInspectWithRaw(context.Background(), orginImage, false)
-		if err == nil {
-			log.Infof("Will tag image %s to %s", orginImage, image)
-			options := types.ImageTagOptions{
-				ImageID:        orginImage,
-				RepositoryName: strings.SplitN(image, ":", 2)[0],
-				Tag:            strings.SplitN(image, ":", 2)[1],
-				Force:          false,
-			}
-			if err := client.ImageTag(context.Background(), options); err != nil {
-				log.Warnf("Failed to tag image from %s to %s: %v", orginImage, image, err)
+	// If it is already built-in, we should use tag image.
+	// Use case: open-vmtools with another REGISTRY_DOMAIN setting.
+	cfg := config.LoadConfig()
+	registryDomain := ""
+	if cfg != nil && cfg.Rancher.Environment != nil {
+		registryDomain = cfg.Rancher.Environment["REGISTRY_DOMAIN"]
+	}
+	if registryDomain == "" {
+		registryDomain = "docker.io"
+	}
+	if registryDomain != "docker.io" && strings.Contains(image, registryDomain) {
+		parts := strings.SplitN(image, "/", 2)
+		if len(parts) == 2 && parts[1] != "" {
+			orginImage := parts[1]
+			_, _, err := client.ImageInspectWithRaw(context.Background(), orginImage, false)
+			if err == nil {
+				log.Infof("Will tag image %s to %s", orginImage, image)
+				tagParts := strings.SplitN(image, ":", 2)
+				tag := "latest"
+				if len(tagParts) == 2 {
+					tag = tagParts[1]
+				}
+				options := types.ImageTagOptions{
+					ImageID:        orginImage,
+					RepositoryName: tagParts[0],
+					Tag:            tag,
+					Force:          false,
+				}
+				if err := client.ImageTag(context.Background(), options); err != nil {
+					log.Warnf("Failed to tag image from %s to %s: %v", orginImage, image, err)
+				}
 			}
 		}
 	}

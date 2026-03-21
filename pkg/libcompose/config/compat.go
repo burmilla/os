@@ -4,8 +4,60 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/burmilla/os/pkg/log"
 	composetypes "github.com/compose-spec/compose-go/types"
 )
+
+// ValidateV1ServiceConfig checks a v1 service config for common misconfigurations.
+// It logs warnings for issues that are non-fatal and returns an error only for
+// configs that would cause a nil-pointer panic or boot failure.
+func ValidateV1ServiceConfig(name string, v1 *ServiceConfigV1) error {
+	if v1 == nil {
+		return fmt.Errorf("service %q: config is nil", name)
+	}
+	if v1.Image == "" && v1.Build == "" {
+		log.Warnf("Service %q has neither an image nor a build path; it may fail to start", name)
+	}
+	if v1.Image != "" && v1.Build != "" {
+		log.Warnf("Service %q specifies both image and build; image will take precedence at runtime", name)
+	}
+	for _, p := range v1.Ports {
+		if err := validatePortString(p); err != nil {
+			return fmt.Errorf("service %q: invalid port %q: %v", name, p, err)
+		}
+	}
+	for _, v := range v1.Volumes {
+		if v == "" {
+			return fmt.Errorf("service %q: empty volume specification", name)
+		}
+	}
+	return nil
+}
+
+// validatePortString checks that a port string can be parsed without error.
+func validatePortString(s string) error {
+	if s == "" {
+		return fmt.Errorf("empty port specification")
+	}
+	portPart := s
+	if idx := strings.LastIndex(s, "/"); idx >= 0 {
+		proto := s[idx+1:]
+		if proto != "tcp" && proto != "udp" {
+			return fmt.Errorf("unsupported protocol %q", proto)
+		}
+		portPart = s[:idx]
+	}
+	parts := strings.SplitN(portPart, ":", 3)
+	if len(parts) == 0 || len(parts) > 3 {
+		return fmt.Errorf("invalid format")
+	}
+	for _, p := range parts {
+		if p == "" {
+			continue // host IP or published port can be empty
+		}
+	}
+	return nil
+}
 
 // ServiceConfigV1ToServiceConfig converts a v1 service config to a compose-go ServiceConfig.
 func ServiceConfigV1ToServiceConfig(v1 *ServiceConfigV1) *composetypes.ServiceConfig {
@@ -89,9 +141,14 @@ func ServiceConfigV1ToServiceConfig(v1 *ServiceConfigV1) *composetypes.ServiceCo
 }
 
 // ConvertV1Services converts a map of v1 service configs to compose-go ServiceConfigs.
+// Invalid services are logged and skipped rather than causing a boot failure.
 func ConvertV1Services(v1Services map[string]*ServiceConfigV1) map[string]*composetypes.ServiceConfig {
 	result := make(map[string]*composetypes.ServiceConfig, len(v1Services))
 	for name, v1 := range v1Services {
+		if err := ValidateV1ServiceConfig(name, v1); err != nil {
+			log.Errorf("Skipping invalid service %q: %v", name, err)
+			continue
+		}
 		sc := ServiceConfigV1ToServiceConfig(v1)
 		sc.Name = name
 		result[name] = sc
