@@ -514,7 +514,7 @@ func applyInterfaceConfig(link netlink.Link, netConf InterfaceConfig) error {
 	}
 
 	// replace the existing gw with the main ipv4 one
-	if err := setGateway(netConf.Gateway, true); err != nil {
+	if err := setGateway(netConf.Gateway, false); err != nil {
 		log.Errorf("Fail to set gateway %s", netConf.Gateway)
 	}
 	//and then add the ipv6 one if it exists

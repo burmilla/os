@@ -27,7 +27,7 @@ func (b *Bonding) init() error {
 		log.Info("Loading bonding kernel module")
 		cmd := exec.Command("modprobe", "bonding")
 		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdin
+		cmd.Stdout = os.Stdout
 		err = cmd.Run()
 		if err != nil {
 			for i := 0; i < 30; i++ {
