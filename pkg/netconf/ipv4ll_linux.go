@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"strings"
 
 	"github.com/burmilla/os/pkg/log"
 
@@ -21,7 +22,7 @@ func AssignLinkLocalIP(link netlink.Link) error {
 		return err
 	}
 	for _, addr := range addrs {
-		if addr.String()[:7] == "169.254" {
+		if strings.HasPrefix(addr.String(), "169.254") {
 			log.Info("Link Local IP already set on interface")
 			return nil
 		}
@@ -30,9 +31,9 @@ func AssignLinkLocalIP(link netlink.Link) error {
 	if err != nil {
 		return err
 	}
+	randGenerator := rand.New(*randSource)
 	// try a random address upto 10 times
 	for i := 0; i < 10; i++ {
-		randGenerator := rand.New(*randSource)
 		randomNum := randGenerator.Uint32()
 		dstIP := getNewIPV4LLAddr(randomNum)
 		if dstIP[2] == 0 || dstIP[2] == 255 {
@@ -65,7 +66,7 @@ func RemoveLinkLocalIP(link netlink.Link) error {
 		return err
 	}
 	for _, addr := range addrs {
-		if addr.String()[:7] == "169.254" {
+		if strings.HasPrefix(addr.String(), "169.254") {
 			if err := netlink.AddrDel(link, &addr); err != nil {
 				log.Error("ipv4ll addr del failed")
 				return err
