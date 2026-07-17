@@ -314,21 +314,37 @@ Recommended 3.x scope:
 3. Add `v3.0.x` branch + `releases.yml` in `burmilla/releases` so
    `ros os upgrade` can see 3.x (the `upgrade.url` in step 5.3 points there).
 4. Console list: 2.x already dropped non-Debian consoles, nothing to remove.
+5. Release flavors: the `Makefile` targets `vmware`, `hyperv`, `azurebase`,
+   `proxmoxve`, `4glte`, `rpi64` append pinned system images, some of them
+   kernel-version-tagged (e.g. `os-hypervvmtools:v4.14.206-burmilla-1`).
+   For the 6.12 Debian kernel most Hyper-V (`hv_*`) and VMware (`vmw_*`,
+   vmxnet3) drivers are in-tree modules, so several of these bolt-on images can
+   likely be dropped in favor of Debian kernel modules + the existing
+   `open-vm-tools`/`hyperv-vm-tools`/`qemu-guest-agent`/`waagent` services from
+   os-services. Audit each flavor and rebuild or retire its appended images.
 
 ### 8. Upgrade path 2.x -> 3.x (must-not-break)
 
-1. `ros os upgrade` runs the *new* version's os image on the *old* system:
-   verify the 3.x upgrade container still works against the 2.x System Docker
-   API (this is why the old API-version pin in `pkg/compose`/docker client
-   matters; test explicitly).
+1. `ros os upgrade` runs the *new* version's os image as a privileged container
+   on the *old* system's System Docker (`startUpgradeContainer` in
+   `cmd/control/os.go`). The 3.x `ros` binary (new Go, new vendor tree) must
+   therefore keep talking to the 17.06 System Docker API — the
+   `DefaultAPIVersion = "v1.31"` pin in `pkg/libcompose/docker/client/client.go`
+   must survive the Go modules migration; test the 2.0.x -> 3.0 upgrade
+   explicitly on a real 2.0.x install.
 2. Kernel jump 5.10 -> 6.12: existing `modprobe`/module-name assumptions,
    renamed modules, and removed drivers should be checked against the
    hardware/VM targets we officially support (VMware, Hyper-V, KVM/Proxmox,
    Azure, bare metal amd64/arm64, Raspberry Pi 64).
-3. Boot stack: syslinux/isolinux from the trixie build env must still produce
-   ISOs bootable on existing BIOS + UEFI installs, and `ros os upgrade` writes
-   the new kernel/initrd into the existing boot partition — test on a disk
+3. Boot stack: BurmillaOS boots via **BIOS syslinux/isolinux only** (see
+   `scripts/package-iso`, `cmd/control/install.go`; the grub code there only
+   migrates legacy RancherOS grub installs, and rpi64 uses u-boot). Verify
+   trixie still ships usable `isolinux`/`syslinux-common` packages (syslinux
+   upstream is dormant — Debian still packages it). `ros os upgrade` rewrites
+   kernel/initrd + `global.cfg` in the existing boot partition — test on a disk
    installed with 2.0.x, including `system-docker.json`/`docker` data survival.
+   Native UEFI boot is a frequently-wanted feature but is **out of 3.0 scope**;
+   track it separately so it doesn't destabilize the upgrade path.
 4. Config compatibility: all existing `/var/lib/rancher/conf/cloud-config.yml`
    keys must keep parsing (the compose-go migration already maintains v1
    service-format compatibility via `pkg/libcompose` + `config/compat.go` —
