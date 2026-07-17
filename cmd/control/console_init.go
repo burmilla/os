@@ -233,6 +233,15 @@ $(tput sgr0)
 		log.Error(err)
 	}
 
+	// mount the cgroup v2 unified hierarchy beside the v1 hierarchies
+	// (hybrid layout, same as PID1 does for the host in pkg/dfs)
+	if err := os.MkdirAll("/sys/fs/cgroup/unified", 0555); err != nil {
+		log.Error(err)
+	}
+	if err := unix.Mount("cgroup2", "/sys/fs/cgroup/unified", "cgroup2", 0, ""); err != nil {
+		log.Error(err)
+	}
+
 	// font backslashes need to be escaped for when issue is output! (but not the others..)
 	if err := ioutil.WriteFile("/etc/issue", []byte(config.Banner), 0644); err != nil {
 		log.Error(err)

@@ -25,6 +25,10 @@ const (
 	iptables      = "/sbin/iptables"
 	modprobe      = "/sbin/modprobe"
 	distSuffix    = ".dist"
+	// cgroup v2 mount point in the hybrid layout: v1 controller hierarchies
+	// stay at /sys/fs/cgroup/<controller> for System Docker, the unified
+	// hierarchy is available next to them for software that supports it.
+	cgroupV2Path = "/sys/fs/cgroup/unified"
 )
 
 var (
@@ -118,7 +122,9 @@ func mountCgroups(hierarchyConfig map[string]string) error {
 
 	for _, hierarchy := range hierarchies {
 		if err := mountCgroup(strings.Join(hierarchy, ",")); err != nil {
-			return err
+			// A controller may exist without v1 support (e.g. built with
+			// CONFIG_MEMCG_V1=n); it is then only usable via cgroup v2 below
+			log.Errorf("Failed to mount cgroup hierarchy %s: %v", strings.Join(hierarchy, ","), err)
 		}
 	}
 
@@ -126,8 +132,24 @@ func mountCgroups(hierarchyConfig map[string]string) error {
 		return err
 	}
 
+	if err := mountCgroupV2(); err != nil {
+		log.Errorf("Failed to mount cgroup2 to %s: %v", cgroupV2Path, err)
+	}
+
 	log.Debug("Done mouting cgroupfs")
 	return nil
+}
+
+// mountCgroupV2 mounts the cgroup v2 unified hierarchy beside the v1
+// controller hierarchies (systemd-style "hybrid" layout). Controllers that
+// are mounted on a v1 hierarchy stay there, so System Docker keeps working,
+// while v2-aware software can use the unified hierarchy.
+func mountCgroupV2() error {
+	if err := createDirs(cgroupV2Path); err != nil {
+		return err
+	}
+
+	return createMounts([][]string{{"cgroup2", cgroupV2Path, "cgroup2", "rw,nosuid,nodev,noexec,relatime,nsdelegate"}}...)
 }
 
 func CreateSymlinks(pathSets [][]string) error {
