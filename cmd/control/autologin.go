@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
@@ -29,6 +31,13 @@ func AutologinMain() {
 }
 
 func autologinAction(c *cli.Context) error {
+	// login from util-linux (Debian 13 and later consoles) calls vhangup()
+	// on the tty, which sends SIGHUP to every other process holding the tty
+	// open — including this one. Ignore it so we keep waiting for the child
+	// instead of dying, which would make respawn restart agetty on top of
+	// the freshly started session.
+	signal.Ignore(syscall.SIGHUP)
+
 	cmd := exec.Command("/bin/stty", "sane")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -74,16 +83,15 @@ func autologinAction(c *cli.Context) error {
 	}
 	os.Setenv("TERM", "linux")
 
-	// Causes all sorts of issues
-	//return syscall.Exec(loginBinPath, args, os.Environ())
-	cmd = exec.Command(loginBinPath, args...)
-	cmd.Env = os.Environ()
-
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	if err := cmd.Run(); err != nil {
-		log.Errorf("\nError starting %s: %s", cmd.Args[0], err)
+	// login from util-linux (Debian 13 and later consoles) must run as the
+	// session leader owning the tty: when run as a child process instead,
+	// its setpgrp() puts it into a background process group and the kernel
+	// then stops it with SIGTTOU on the first tcsetattr(), leaving the
+	// console hung. Replace this process (exec'd by agetty as session
+	// leader) with the login program, as getty implementations normally do.
+	if err := syscall.Exec(loginBinPath, append([]string{loginBin}, args...), os.Environ()); err != nil {
+		log.Errorf("\nError starting %s: %s", loginBin, err)
+		return err
 	}
 	return nil
 }
