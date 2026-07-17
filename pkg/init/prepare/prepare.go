@@ -10,14 +10,7 @@ import (
 )
 
 var (
-	mountConfig = dfs.Config{
-		CgroupHierarchy: map[string]string{
-			"cpu":      "cpu",
-			"cpuacct":  "cpu",
-			"net_cls":  "net_cls",
-			"net_prio": "net_cls",
-		},
-	}
+	mountConfig = dfs.Config{}
 )
 
 func FS(c *config.CloudConfig) (*config.CloudConfig, error) {

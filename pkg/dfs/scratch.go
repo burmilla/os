@@ -1,7 +1,6 @@
 package dfs
 
 import (
-	"bufio"
 	"io"
 	"io/ioutil"
 	"os"
@@ -25,6 +24,7 @@ const (
 	iptables      = "/sbin/iptables"
 	modprobe      = "/sbin/modprobe"
 	distSuffix    = ".dist"
+	cgroupV2Path  = "/sys/fs/cgroup"
 )
 
 var (
@@ -49,7 +49,6 @@ type Config struct {
 	BridgeName        string
 	BridgeAddress     string
 	BridgeMtu         int
-	CgroupHierarchy   map[string]string
 	LogFile           string
 	NoLog             bool
 	NoFiles           uint64
@@ -84,50 +83,16 @@ func createDirs(dirs ...string) error {
 	return nil
 }
 
-func mountCgroups(hierarchyConfig map[string]string) error {
-	f, err := os.Open("/proc/cgroups")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-
-	hierarchies := make(map[string][]string)
-
-	for scanner.Scan() {
-		text := scanner.Text()
-		log.Debugf("/proc/cgroups: %s", text)
-		fields := strings.Split(text, "\t")
-		cgroup := fields[0]
-		if cgroup == "" || cgroup[0] == '#' || (len(fields) > 3 && fields[3] == "0") {
-			continue
-		}
-
-		hierarchy := hierarchyConfig[cgroup]
-		if hierarchy == "" {
-			hierarchy = fields[1]
-		}
-
-		if hierarchy == "0" {
-			hierarchy = cgroup
-		}
-
-		hierarchies[hierarchy] = append(hierarchies[hierarchy], cgroup)
-	}
-
-	for _, hierarchy := range hierarchies {
-		if err := mountCgroup(strings.Join(hierarchy, ",")); err != nil {
-			return err
-		}
-	}
-
-	if err = scanner.Err(); err != nil {
+// mountCgroupV2 mounts the cgroup v2 unified hierarchy beside the v1
+// controller hierarchies (systemd-style "hybrid" layout). Controllers that
+// are mounted on a v1 hierarchy stay there, so System Docker keeps working,
+// while v2-aware software can use the unified hierarchy.
+func mountCgroupV2() error {
+	if err := createDirs(cgroupV2Path); err != nil {
 		return err
 	}
 
-	log.Debug("Done mouting cgroupfs")
-	return nil
+	return createMounts([][]string{{"cgroup2", cgroupV2Path, "cgroup2", "rw,nosuid,nodev,noexec,relatime,nsdelegate"}}...)
 }
 
 func CreateSymlinks(pathSets [][]string) error {
@@ -436,7 +401,7 @@ func PrepareFs(config *Config) error {
 	}
 
 	if util.GetHypervisor() != "wsl2" {
-		if err := mountCgroups(config.CgroupHierarchy); err != nil {
+		if err := mountCgroupV2(); err != nil {
 			return err
 		}
 	}
