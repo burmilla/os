@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 
 COPY build/sshd_config.append.tpl /etc/ssh/
 COPY build/lsb-release /etc/
@@ -25,7 +25,6 @@ RUN apt-get update \
     && echo 'rancher ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
     && echo '## allow password less for docker user' >> /etc/sudoers \
     && echo 'docker ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
-    && ln -s /bin/ps /usr/bin/ps \
     && cat /etc/ssh/sshd_config > /etc/ssh/sshd_config.tpl \
     && cat /etc/ssh/sshd_config.append.tpl >> /etc/ssh/sshd_config.tpl \
     && rm -f /etc/ssh/sshd_config.append.tpl /etc/ssh/sshd_config \
