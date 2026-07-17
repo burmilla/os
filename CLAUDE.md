@@ -154,7 +154,7 @@ BurmillaOS maintains forked versions of several critical dependencies under the 
 | os-initrd-base | Buildroot 2023.02.10 **static uClibc busybox** initrd, kernel headers pinned to 5.10 | Same EOL problem; headers pin blocks 6.12 | Rebuild against 6.12 headers; keep static busybox (smallest) or use Debian `busybox-static` |
 | Build environment | `Dockerfile.dapper` FROM `ubuntu:bionic` (18.04, EOL) | EOL base, old syslinux/xorriso toolchain | `debian:trixie` build image |
 | Go toolchain | Go 1.19.5, `GO111MODULE=off`, `trash` + checked-in vendor | Go 1.19 EOL; `golang.org/x/crypto`, `x/net`, `x/sys` pinned to go1.15-era commits (known CVEs in x/crypto SSH, e.g. Terrapin) | Debian 13's Go (1.24.x); migrate to Go modules + `go mod vendor` |
-| System Docker | 17.06.107 fork (pre-built from `burmilla/os-system-docker`) | cgroup v1 only; ancient runc; blocks cgroup v2-only futures | Decide: keep on cgroup v1 for 3.0 or upgrade (see open questions) |
+| System Docker | 17.06.107 fork (pre-built from `burmilla/os-system-docker`) | cgroup v1 only; ancient runc; blocks cgroup v2-only futures | 3.0: keep 17.06 on v1 + hybrid cgroup v2 mount (decided, see step 6); replacement targeted at 3.1+ |
 | User Docker | `os-services` v2.0.x branch, engines up to 29.1.5 (`DOCKER_MIN_API_VERSION=1.24` workaround for old System Docker API) | Workarounds pile up because System Docker is old | Keep current engine cadence; new `v3.0.x` branch |
 
 ## Plan steps
@@ -277,33 +277,37 @@ benefit (a static busybox is a static busybox) and is the smallest-risk piece:
 
 System Docker 17.06.107 is the highest-risk legacy piece. Facts found in review:
 
-- `pkg/dfs/scratch.go` mounts **cgroup v1** hierarchies parsed from
-  `/proc/cgroups`; there is no cgroup v2 mount path. `console_init.go` also
-  mounts a v1 `name=systemd` hierarchy.
 - Docker 17.06 cannot run on a cgroup v2-only kernel.
-- Linux 6.12 made several v1 controllers optional (`CONFIG_MEMCG_V1=n` by
-  default); Debian's config must be checked (step 1.3), and even where v1 still
-  works it is on its way out kernel-side and Docker-side.
+- The old `cgroup-v2-support` draft branch (commits `a226176` + `cf97ce6`)
+  replaced the v1 controller mounts with a single pure `cgroup2` mount at
+  `/sys/fs/cgroup`. That leaves System Docker 17.06 without any v1 controller
+  hierarchies, so system containers cannot start — the remembered boot issues.
+  Do not resurrect that approach while System Docker 17.06 is in use.
 - `os-services` already carries `DOCKER_MIN_API_VERSION=1.24` downgrade hacks so
   modern user-Docker CLIs can talk to the old System Docker.
 
-Recommended 3.x scope:
+Decided 3.x scope (cgroups):
 
-1. **3.0 ships with System Docker 17.06 kept on cgroup v1** *if and only if*
-   the Debian 6.12 kernel (or a one-line config override in the fallback
-   source build) still provides the v1 controllers System Docker needs
-   (cpu, cpuacct, cpuset, memory, devices, freezer, blkio, pids). Boot with
-   `cgroup_memory=1`-style cmdline entries as required. This keeps upgrade risk
-   for existing installations near zero.
-2. Start a parallel `os-system-docker` upgrade track (modern moby or plain
-   containerd+nerdctl) targeting 3.1+: add cgroup2 mounting support to
-   `pkg/dfs/scratch.go`, remove the API-version downgrade hacks, and drop the
+1. The 3.x kernel (6.12) is built with **both cgroup v1 and v2 enabled**
+   (`CONFIG_MEMCG_V1=y` etc. — several v1 controllers are no longer default-on
+   in 6.12).
+2. **Hybrid cgroup layout** (implemented on this branch): PID1 keeps mounting
+   the v1 controller hierarchies at `/sys/fs/cgroup/<controller>` (parsed from
+   `/proc/cgroups` in `pkg/dfs/scratch.go`) so System Docker 17.06 keeps
+   working, and additionally mounts the **cgroup v2 unified hierarchy at
+   `/sys/fs/cgroup/unified`** (systemd hybrid-mode convention).
+   `console_init.go` mounts the same unified hierarchy inside the console
+   container next to its `name=systemd` v1 mount. v1 hierarchy mount failures
+   are now non-fatal (logged) so a kernel lacking some v1 controller still
+   boots. Note: controllers bound to a v1 hierarchy are not usable through the
+   v2 hierarchy at the same time — full v2 resource control arrives only with
+   the System Docker replacement.
+3. Start a parallel `os-system-docker` upgrade track (modern moby or plain
+   containerd+nerdctl) targeting 3.1+: switch the primary `/sys/fs/cgroup`
+   mount to cgroup2, remove the API-version downgrade hacks, and drop the
    17.06-era vendored client pins in this repo. This is the single change that
    would retire the most forked-code maintenance (burmilla/docker,
    burmilla/containerd, burmilla/runc forks all exist because of 17.06).
-3. If Debian's binary kernel turns out to be v1-incapable, the decision
-   flips: System Docker upgrade becomes a 3.0 blocker (or the kernel falls back
-   to source-build-with-config-override, step 1.2 fallback).
 
 ### 7. os-services + releases branches
 
@@ -358,8 +362,8 @@ Recommended 3.x scope:
 
 1. Step 5.1-5.2 (build env + Go modules) — unblocks everything else and makes
    CI trustworthy for the rest.
-2. Step 1 (Debian kernel) with the cgroup v1 verification (6.1) done first —
-   its outcome decides System Docker scope.
+2. Step 1 (Debian kernel), with both cgroup v1 and v2 enabled in the config
+   (6.1) — the hybrid mount code (6.2) is already in this branch.
 3. Steps 2-4 (os-base, os-initrd-base, console) — independent of each other,
    can proceed in parallel.
 4. Step 7 (branches) once artifacts exist.
