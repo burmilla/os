@@ -8,18 +8,14 @@ import (
 	"github.com/burmilla/os/pkg/netconf"
 	"github.com/burmilla/os/pkg/sysinit"
 
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/yaml"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 )
 
 var (
 	// TODO: move this into the os-config file so it can be customised.
 	recoveryDockerService = composeConfig.ServiceConfigV1{
-		Image: config.OsBase,
-		Command: yaml.Command{
-			"ros",
-			"recovery-init",
-		},
+		Image:   config.OsBase,
+		Command: []string{"ros", "recovery-init"},
 		Labels: map[string]string{
 			config.DetachLabel: "false",
 			config.ScopeLabel:  "system",

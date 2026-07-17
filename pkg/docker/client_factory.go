@@ -8,9 +8,9 @@ import (
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
+	composeClient "github.com/burmilla/os/pkg/libcompose/docker/client"
+	"github.com/burmilla/os/pkg/libcompose/project"
 	dockerclient "github.com/docker/engine-api/client"
-	composeClient "github.com/docker/libcompose/docker/client"
-	"github.com/docker/libcompose/project"
 	"golang.org/x/net/context"
 )
 

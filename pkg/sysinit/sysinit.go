@@ -16,8 +16,8 @@ import (
 	"github.com/burmilla/os/pkg/docker"
 	"github.com/burmilla/os/pkg/log"
 
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	"github.com/docker/engine-api/types"
-	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 
