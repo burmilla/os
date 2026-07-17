@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -18,8 +19,15 @@ import (
 )
 
 const (
-	dockerCgroupsFile = "/proc/self/cgroup"
+	cgroupFile    = "/proc/self/cgroup"
+	mountInfoFile = "/proc/self/mountinfo"
+
+	containerIDLength = 64
 )
+
+// Files which Docker bind mounts into every container from
+// <docker-root>/containers/<container-id>/.
+var containerMountPoints = []string{"/etc/resolv.conf", "/etc/hostname", "/etc/hosts"}
 
 type AnyMap map[interface{}]interface{}
 
@@ -204,36 +212,145 @@ func TrimSplit(str, sep string) []string {
 	return TrimSplitN(str, sep, -1)
 }
 
+// GetCurrentContainerID returns the ID of the Docker container this process is
+// running in.
 func GetCurrentContainerID() (string, error) {
-	file, err := os.Open(dockerCgroupsFile)
-
+	id, err := containerIDFromCgroup()
 	if err != nil {
 		return "", err
 	}
-
-	fileReader := bufio.NewScanner(file)
-	if !fileReader.Scan() {
-		return "", errors.New("Empty file /proc/self/cgroup")
+	if id != "" {
+		return id, nil
 	}
-	line := fileReader.Text()
-	parts := strings.Split(line, "/")
 
-	for len(parts) != 3 {
-		if !fileReader.Scan() {
-			return "", errors.New("Found no docker cgroups")
+	// Docker only names the cgroup of a container after the container itself
+	// when it manages that cgroup. System Docker does not do so on a cgroup v2
+	// only system, which leaves us with a plain "0::/", so fall back to the
+	// per container files which are bind mounted into every container.
+	id, err = containerIDFromMountInfo()
+	if err != nil {
+		return "", err
+	}
+	if id == "" {
+		return "", errors.New("Found no docker container ID for the current process")
+	}
+
+	return id, nil
+}
+
+// containerIDFromCgroup looks for the container ID in the cgroup paths of the
+// current process. It returns an empty string when none of them names a
+// container, which is the normal case outside of a container and on a cgroup
+// v2 only system.
+func containerIDFromCgroup() (string, error) {
+	file, err := os.Open(cgroupFile)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	return parseCgroup(file)
+}
+
+func parseCgroup(cgroup io.Reader) (string, error) {
+	scanner := bufio.NewScanner(cgroup)
+	for scanner.Scan() {
+		// hierarchy-ID:controller-list:cgroup-path, where the cgroup v2
+		// unified hierarchy uses ID 0 and an empty controller list.
+		fields := strings.SplitN(scanner.Text(), ":", 3)
+		if len(fields) != 3 {
+			continue
 		}
-		line = fileReader.Text()
-		parts = strings.Split(line, "/")
-		if len(parts) == 3 {
-			if strings.HasSuffix(parts[1], "docker") {
-				break
-			} else {
-				parts = nil
+
+		// The container ID is either a path element of its own, as in
+		// /docker/<id>, or part of a scope, as in
+		// /system.slice/docker-<id>.scope.
+		for _, part := range strings.Split(fields[2], "/") {
+			part = strings.TrimPrefix(strings.TrimSuffix(part, ".scope"), "docker-")
+			if isContainerID(part) {
+				return part, nil
 			}
 		}
 	}
 
-	return parts[len(parts)-1:][0], nil
+	return "", scanner.Err()
+}
+
+// containerIDFromMountInfo looks for the container ID in the source paths of
+// the files which Docker bind mounts into every container. It returns an empty
+// string when the current process is not running in a container.
+func containerIDFromMountInfo() (string, error) {
+	file, err := os.Open(mountInfoFile)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	return parseMountInfo(file)
+}
+
+func parseMountInfo(mountInfo io.Reader) (string, error) {
+	id := ""
+	otherID := ""
+
+	scanner := bufio.NewScanner(mountInfo)
+	for scanner.Scan() {
+		// The fourth field is the root of the mount within its filesystem and
+		// the fifth one is the mount point, for example:
+		// 273 259 8:1 /var/lib/system-docker/containers/<id>/resolv.conf /etc/resolv.conf rw,relatime - ext4 ...
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 5 {
+			continue
+		}
+
+		found := containerIDFromPath(fields[3])
+		if found == "" {
+			continue
+		}
+
+		// Later mounts shadow earlier ones, so keep looking to end up with
+		// the file which is actually visible on the mount point.
+		if Contains(containerMountPoints, fields[4]) {
+			id = found
+		} else {
+			// Anything else mounted out of the container directory, such as
+			// /dev/shm, still identifies the container.
+			otherID = found
+		}
+	}
+
+	if id == "" {
+		id = otherID
+	}
+
+	return id, scanner.Err()
+}
+
+// containerIDFromPath returns the container ID of a <docker-root>/containers/
+// <container-id>/<file> path, or an empty string when path is not one.
+func containerIDFromPath(mountRoot string) string {
+	parts := strings.Split(mountRoot, "/")
+	for i, part := range parts {
+		if part == "containers" && i+1 < len(parts) && isContainerID(parts[i+1]) {
+			return parts[i+1]
+		}
+	}
+
+	return ""
+}
+
+func isContainerID(s string) bool {
+	if len(s) != containerIDLength {
+		return false
+	}
+
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+
+	return true
 }
 
 func UnescapeKernelParams(s string) string {
