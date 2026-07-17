@@ -12,8 +12,8 @@ import (
 	httpRetry "github.com/burmilla/os/config/cloudinit/pkg"
 	"github.com/burmilla/os/pkg/log"
 
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
-	composeConfig "github.com/docker/libcompose/config"
 )
 
 var (

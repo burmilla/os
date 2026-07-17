@@ -8,8 +8,8 @@ import (
 	"github.com/burmilla/os/config/yaml"
 	"github.com/burmilla/os/pkg/netconf"
 
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/docker/engine-api/types"
-	composeConfig "github.com/docker/libcompose/config"
 )
 
 const (

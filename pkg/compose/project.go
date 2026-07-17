@@ -11,33 +11,45 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
+	"github.com/burmilla/os/pkg/libcompose/cli/logger"
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/docker"
+	composeClient "github.com/burmilla/os/pkg/libcompose/docker/client"
+	"github.com/burmilla/os/pkg/libcompose/project"
+	"github.com/burmilla/os/pkg/libcompose/project/events"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
+	composetypes "github.com/compose-spec/compose-go/types"
 	dockerClient "github.com/docker/engine-api/client"
-	"github.com/docker/libcompose/cli/logger"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/docker"
-	composeClient "github.com/docker/libcompose/docker/client"
-	"github.com/docker/libcompose/project"
-	"github.com/docker/libcompose/project/events"
-	"github.com/docker/libcompose/project/options"
 	"golang.org/x/net/context"
 )
 
-func CreateService(cfg *config.CloudConfig, name string, serviceConfig *composeConfig.ServiceConfigV1) (project.Service, error) {
+// CreateService creates a single service from a compose-go ServiceConfig.
+func CreateService(cfg *config.CloudConfig, name string, serviceConfig *composetypes.ServiceConfig) (project.Service, error) {
 	if cfg == nil {
 		cfg = config.LoadConfig()
 	}
 
-	p, err := CreateServiceSet("once", cfg, map[string]*composeConfig.ServiceConfigV1{
-		name: serviceConfig,
-	})
+	p, err := newProject("once", cfg, nil, nil)
 	if err != nil {
+		return nil, err
+	}
+
+	serviceConfig.Name = name
+	if err := p.AddConfig(name, serviceConfig); err != nil {
 		return nil, err
 	}
 
 	return p.CreateService(name)
 }
 
+// CreateServiceV1 creates a single service from a v1 service config (for backward compat).
+func CreateServiceV1(cfg *config.CloudConfig, name string, serviceConfig *composeConfig.ServiceConfigV1) (project.Service, error) {
+	sc := composeConfig.ServiceConfigV1ToServiceConfig(serviceConfig)
+	return CreateService(cfg, name, sc)
+}
+
+// CreateServiceSet creates a project with the given v1 service configs.
 func CreateServiceSet(name string, cfg *config.CloudConfig, configs map[string]*composeConfig.ServiceConfigV1) (*project.Project, error) {
 	p, err := newProject(name, cfg, nil, nil)
 	if err != nil {
@@ -49,6 +61,7 @@ func CreateServiceSet(name string, cfg *config.CloudConfig, configs map[string]*
 	return p, nil
 }
 
+// RunServiceSet creates and starts a set of services from v1 configs.
 func RunServiceSet(name string, cfg *config.CloudConfig, configs map[string]*composeConfig.ServiceConfigV1) (*project.Project, error) {
 	p, err := CreateServiceSet(name, cfg, configs)
 	if err != nil {
@@ -100,19 +113,17 @@ func newProject(name string, cfg *config.CloudConfig, environmentLookup composeC
 	})
 }
 
+// preprocessServiceMap converts all values in "environment" and "labels" keys
+// to strings, which is required for proper variable interpolation. Other keys
+// are left as-is to preserve their original types (int, bool, etc.).
 func preprocessServiceMap(serviceMap composeConfig.RawServiceMap) (composeConfig.RawServiceMap, error) {
 	newServiceMap := make(composeConfig.RawServiceMap)
 
-	for k, v := range serviceMap {
-		newServiceMap[k] = make(composeConfig.RawService)
-
-		for k2, v2 := range v {
-			if k2 == "environment" || k2 == "labels" {
-				newServiceMap[k][k2] = preprocess(v2, true)
-			} else {
-				newServiceMap[k][k2] = preprocess(v2, false)
-			}
-
+	for serviceName, service := range serviceMap {
+		newServiceMap[serviceName] = make(composeConfig.RawService)
+		for key, value := range service {
+			stringifyValues := key == "environment" || key == "labels"
+			newServiceMap[serviceName][key] = preprocess(value, stringifyValues)
 		}
 	}
 
@@ -148,14 +159,17 @@ func preprocess(item interface{}, replaceTypes bool) interface{} {
 	}
 }
 
+// addServices converts v1 service configs and adds them to the project.
+// It uses content hashing to skip services whose config has not changed,
+// avoiding unnecessary service recreation during reloads.
 func addServices(p *project.Project, enabled map[interface{}]interface{}, configs map[string]*composeConfig.ServiceConfigV1) map[interface{}]interface{} {
 	serviceConfigsV2, _ := composeConfig.ConvertServices(configs)
 
-	// Note: we ignore errors while loading services
-	unchanged := true
+	mapCopied := false
 	for name, serviceConfig := range serviceConfigsV2 {
 		hash := composeConfig.GetServiceHash(name, serviceConfig)
 
+		// Skip if this service's config hash hasn't changed since last load
 		if enabled[name] == hash {
 			continue
 		}
@@ -165,9 +179,10 @@ func addServices(p *project.Project, enabled map[interface{}]interface{}, config
 			continue
 		}
 
-		if unchanged {
+		// Copy-on-write: only copy the map when we first need to modify it
+		if !mapCopied {
 			enabled = util.MapCopy(enabled)
-			unchanged = false
+			mapCopied = true
 		}
 		enabled[name] = hash
 	}
@@ -304,7 +319,7 @@ func StageServices(cfg *config.CloudConfig, services ...string) error {
 		}
 		needToPull = true
 
-		p.ServiceConfigs.Add(serviceName, &composeConfig.ServiceConfig{
+		p.ServiceConfigs.Add(serviceName, &composetypes.ServiceConfig{
 			Image:  serviceConfig.Image,
 			Labels: serviceConfig.Labels,
 		})

@@ -20,14 +20,13 @@ import (
 	"github.com/burmilla/os/pkg/util/network"
 	"github.com/burmilla/os/pkg/util/versions"
 
+	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project/options"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
 	"github.com/docker/docker/reference"
 	"github.com/docker/engine-api/types"
 	"github.com/docker/engine-api/types/filters"
-	composeConfig "github.com/docker/libcompose/config"
-	"github.com/docker/libcompose/project/options"
-	composeYaml "github.com/docker/libcompose/yaml"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 )
@@ -537,12 +536,12 @@ func generateEngineCompose(name, version string, sshPort int, authorizedKeys, ne
 		Ports:       []string{strconv.Itoa(sshPort) + ":22"},
 		Volumes:     volumes,
 		VolumesFrom: []string{},
-		Command: composeYaml.Command{
+		Command: []string{
 			"--storage-driver=overlay2",
 			"--data-root=" + config.MultiDockerDataDir + "/" + name,
 			"--host=unix://" + config.MultiDockerDataDir + "/" + name + "/docker-" + name + ".sock",
 		},
-		Labels: composeYaml.SliceorMap{
+		Labels: map[string]string{
 			"io.rancher.os.scope":     "system",
 			"io.rancher.os.after":     "console",
 			config.UserDockerLabel:    name,
