@@ -14,6 +14,7 @@ var (
 		CgroupHierarchy: map[string]string{
 			"cpu":      "cpu",
 			"cpuacct":  "cpu",
+			"memory":   "memory",
 			"net_cls":  "net_cls",
 			"net_prio": "net_cls",
 		},
