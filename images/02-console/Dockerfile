@@ -1,4 +1,4 @@
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 
 COPY build/sshd_config.append.tpl /etc/ssh/
 COPY build/lsb-release /etc/
@@ -9,6 +9,7 @@ RUN apt-get update \
                            net-tools bash-completion wget \
                            nano open-iscsi iputils-ping nvi \
                            apparmor nfs-common \
+                           lastlog2 libpam-lastlog2 \
     && update-alternatives --set iptables /usr/sbin/iptables-legacy \
     && update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy \
     && rm -rf /var/lib/apt/lists/* \
@@ -25,7 +26,11 @@ RUN apt-get update \
     && echo 'rancher ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
     && echo '## allow password less for docker user' >> /etc/sudoers \
     && echo 'docker ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
-    && ln -s /bin/ps /usr/bin/ps \
+    # Debian 13 dropped shadow's lastlog; provide the command via lastlog2.
+    # Its database dir is normally created by systemd-tmpfiles which does
+    # not run here, so create it at build time.
+    && ln -s lastlog2 /usr/bin/lastlog \
+    && mkdir -p /var/lib/lastlog2 \
     && cat /etc/ssh/sshd_config > /etc/ssh/sshd_config.tpl \
     && cat /etc/ssh/sshd_config.append.tpl >> /etc/ssh/sshd_config.tpl \
     && rm -f /etc/ssh/sshd_config.append.tpl /etc/ssh/sshd_config \
