@@ -185,10 +185,12 @@ The `burmilla/os` build only needs a `kernel.tar.gz` with this layout
 4. Modules that BurmillaOS loads from initrd must exist in Debian's (heavily
    modular) config; update `modules/x86/modules.list` + `modules-extra.list`
    equivalents or drop the check.
-5. Update `os-services` `kernel-headers`, `kernel-headers-system-docker`,
-   `kernel-extras` and `zfs` services to publish images matching the Debian
-   kernel version tag (`burmilla/os-headers:<debian-kernel-version>`); for the
-   Debian kernel these can simply install Debian's `linux-headers-*` package.
+5. The `burmilla/os-headers` and `burmilla/os-extras` images are built inside
+   `os-kernel` (`images/10-headers`, `10-extras`, `10-kernel`); they must keep
+   being published with the Debian kernel version tag because the `os-services`
+   `kernel-headers`/`kernel-extras`/`zfs` services reference
+   `os-headers:${KERNEL_VERSION}`. For a Debian kernel these images can simply
+   repackage Debian's `linux-headers-*` packages.
 
 ### 2. os-base: replace Buildroot userland with Debian 13
 
