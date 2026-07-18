@@ -1,4 +1,4 @@
-TARGETS := $(shell ls scripts | grep -vE 'clean|run|help|release*|build-moby|run-moby')
+TARGETS := $(shell ls scripts | grep -vE 'clean|run|help|release*|build-moby|run-moby|deps')
 
 .dapper:
 	@echo Downloading dapper
@@ -16,13 +16,8 @@ pr-validation: .dapper
 	SKIP_BUILD="true" \
 	./.dapper ci
 
-trash: .dapper
-	./.dapper -m bind trash
-
-trash-keep: .dapper
-	./.dapper -m bind trash -k
-
-deps: trash
+deps: .dapper
+	./.dapper -m bind deps
 
 build/initrd/.id: .dapper
 	./.dapper prepare

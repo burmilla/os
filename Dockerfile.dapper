@@ -48,7 +48,6 @@ ENV DAPPER_DOCKER_SOCKET true
 ENV DAPPER_SOURCE /go/src/github.com/burmilla/os
 ENV DAPPER_OUTPUT ./bin ./dist ./build/initrd ./build/kernel
 ENV DAPPER_RUN_ARGS --privileged
-ENV TRASH_CACHE ${DAPPER_SOURCE}/.trash-cache
 ENV SHELL /bin/bash
 WORKDIR ${DAPPER_SOURCE}
 
@@ -105,7 +104,6 @@ ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
     DOWNLOADS=/usr/src/downloads \
     GOPATH=/go \
     GO_VERSION=1.19.5 \
-    GO111MODULE=off \
     GOARCH=$ARCH \
     HOSTNAME_DEFAULT=${HOSTNAME_DEFAULT} \
     IMAGE_NAME=${IMAGE_NAME} \
@@ -133,7 +131,6 @@ ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
     PROXMOXVE_SERVICE=${PROXMOXVE_SERVICE} \
     SKIP_BUILD=${SKIP_BUILD}
 ENV PATH=${GOPATH}/bin:/usr/local/go/bin:$PATH
-ENV GO111MODULE=off
 
 RUN mkdir -p ${DOWNLOADS}
 
@@ -145,8 +142,7 @@ RUN echo "... Downloading  ${!KERNEL_URL}"; \
     ;fi
 
 # Install Go
-RUN curl -L https://dl.google.com/go/go${GO_VERSION}.linux-${HOST_ARCH}.tar.gz | tar -xzf - -C /usr/local && \
-    go get github.com/burmilla/trash
+RUN curl -L https://dl.google.com/go/go${GO_VERSION}.linux-${HOST_ARCH}.tar.gz | tar -xzf - -C /usr/local
 
 # Install Host Docker
 RUN curl -fL ${!BUILD_DOCKER_URL} > /tmp/docker.tgz && \
