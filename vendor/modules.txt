@@ -1,0 +1,257 @@
+# github.com/Microsoft/go-winio v0.1.0
+## explicit
+github.com/Microsoft/go-winio
+# github.com/SvenDowideit/cpuid v0.0.0-20170710000921-dfdb6dba69f4
+## explicit
+github.com/SvenDowideit/cpuid
+# github.com/cloudfoundry-incubator/candiedyaml v0.0.0-00010101000000-000000000000 => github.com/burmilla/candiedyaml v0.0.0-20190123020550-457a86017e98
+## explicit
+github.com/cloudfoundry-incubator/candiedyaml
+# github.com/codegangsta/cli v0.0.0-00010101000000-000000000000 => github.com/burmilla/cli-1 v1.18.1-0.20160809210721-d2b9ba9c38eb
+## explicit
+github.com/codegangsta/cli
+# github.com/compose-spec/compose-go v1.20.2
+## explicit; go 1.19
+github.com/compose-spec/compose-go/dotenv
+github.com/compose-spec/compose-go/template
+github.com/compose-spec/compose-go/types
+github.com/compose-spec/compose-go/utils
+# github.com/coreos/yaml v0.0.0-20141224210557-6b16a5714269
+## explicit
+github.com/coreos/yaml
+# github.com/davecgh/go-spew v1.1.1
+## explicit
+github.com/davecgh/go-spew/spew
+# github.com/distribution/reference v0.5.0
+## explicit; go 1.20
+github.com/distribution/reference
+# github.com/docker/containerd v0.0.0-00010101000000-000000000000 => github.com/burmilla/containerd v0.2.1-0.20210501144658-c5695fa78c8c
+## explicit
+github.com/docker/containerd/osutils
+github.com/docker/containerd/subreaper
+github.com/docker/containerd/subreaper/exec
+# github.com/docker/distribution v0.0.0-00010101000000-000000000000 => ./third_party/docker/distribution
+## explicit; go 1.16
+github.com/docker/distribution
+github.com/docker/distribution/context
+github.com/docker/distribution/digest
+github.com/docker/distribution/reference
+github.com/docker/distribution/registry/api/errcode
+github.com/docker/distribution/registry/api/v2
+github.com/docker/distribution/registry/client
+github.com/docker/distribution/registry/client/auth
+github.com/docker/distribution/registry/client/transport
+github.com/docker/distribution/registry/storage/cache
+github.com/docker/distribution/registry/storage/cache/memory
+github.com/docker/distribution/uuid
+# github.com/docker/docker v0.0.0-00010101000000-000000000000 => github.com/burmilla/docker v0.0.0-20210501162625-1447a2463bc3
+## explicit
+github.com/docker/docker/builder
+github.com/docker/docker/builder/dockerignore
+github.com/docker/docker/cliconfig
+github.com/docker/docker/daemon/graphdriver
+github.com/docker/docker/image
+github.com/docker/docker/image/v1
+github.com/docker/docker/layer
+github.com/docker/docker/opts
+github.com/docker/docker/pkg/archive
+github.com/docker/docker/pkg/chrootarchive
+github.com/docker/docker/pkg/fileutils
+github.com/docker/docker/pkg/gitutils
+github.com/docker/docker/pkg/homedir
+github.com/docker/docker/pkg/httputils
+github.com/docker/docker/pkg/idtools
+github.com/docker/docker/pkg/ioutils
+github.com/docker/docker/pkg/jsonlog
+github.com/docker/docker/pkg/jsonmessage
+github.com/docker/docker/pkg/mflag
+github.com/docker/docker/pkg/mount
+github.com/docker/docker/pkg/plugins
+github.com/docker/docker/pkg/plugins/transport
+github.com/docker/docker/pkg/pools
+github.com/docker/docker/pkg/progress
+github.com/docker/docker/pkg/promise
+github.com/docker/docker/pkg/random
+github.com/docker/docker/pkg/reexec
+github.com/docker/docker/pkg/signal
+github.com/docker/docker/pkg/stdcopy
+github.com/docker/docker/pkg/streamformatter
+github.com/docker/docker/pkg/stringid
+github.com/docker/docker/pkg/symlink
+github.com/docker/docker/pkg/system
+github.com/docker/docker/pkg/tarsum
+github.com/docker/docker/pkg/term
+github.com/docker/docker/pkg/urlutil
+github.com/docker/docker/pkg/version
+github.com/docker/docker/reference
+github.com/docker/docker/registry
+github.com/docker/docker/runconfig/opts
+# github.com/docker/engine-api v0.3.3
+## explicit
+github.com/docker/engine-api/client
+github.com/docker/engine-api/client/transport
+github.com/docker/engine-api/client/transport/cancellable
+github.com/docker/engine-api/types
+github.com/docker/engine-api/types/blkiodev
+github.com/docker/engine-api/types/container
+github.com/docker/engine-api/types/filters
+github.com/docker/engine-api/types/network
+github.com/docker/engine-api/types/registry
+github.com/docker/engine-api/types/strslice
+github.com/docker/engine-api/types/time
+# github.com/docker/go-connections v0.4.0 => ./third_party/docker/go-connections
+## explicit; go 1.16
+github.com/docker/go-connections/nat
+github.com/docker/go-connections/sockets
+github.com/docker/go-connections/tlsconfig
+# github.com/docker/go-units v0.5.0
+## explicit
+github.com/docker/go-units
+# github.com/docker/libnetwork v0.5.6 => ./third_party/docker/libnetwork
+## explicit; go 1.16
+github.com/docker/libnetwork/resolvconf
+github.com/docker/libnetwork/resolvconf/dns
+# github.com/docker/machine v0.3.0-rc1.0.20150728163540-4a8e93ac9bc2
+## explicit
+github.com/docker/machine/log
+github.com/docker/machine/utils
+# github.com/fatih/structs v0.0.0-20160807235529-dc3312cb1a45
+## explicit
+github.com/fatih/structs
+# github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568
+## explicit
+github.com/flynn/go-shlex
+# github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1
+## explicit
+# github.com/gorilla/context v0.0.0-20140604161150-14f550f51af5
+## explicit
+github.com/gorilla/context
+# github.com/gorilla/mux v0.0.0-20140926153814-e444e69cbd2e
+## explicit
+github.com/gorilla/mux
+# github.com/j-keck/arping v0.0.0-20150107081615-4f4d2c8983a1
+## explicit
+github.com/j-keck/arping
+# github.com/jtolds/gls v4.20.0+incompatible
+## explicit
+# github.com/mattn/go-shellwords v1.0.12
+## explicit; go 1.13
+github.com/mattn/go-shellwords
+# github.com/mitchellh/mapstructure v1.5.0
+## explicit; go 1.14
+github.com/mitchellh/mapstructure
+# github.com/onsi/ginkgo v1.2.0
+## explicit
+# github.com/onsi/gomega v1.1.0
+## explicit
+# github.com/opencontainers/go-digest v1.0.0
+## explicit; go 1.13
+github.com/opencontainers/go-digest
+# github.com/opencontainers/runc v0.0.0-00010101000000-000000000000 => github.com/burmilla/runc v0.0.5-0.20160531034625-edc34c4a8c1e
+## explicit
+github.com/opencontainers/runc/libcontainer/user
+# github.com/packethost/packngo v0.1.0
+## explicit
+github.com/packethost/packngo/metadata
+# github.com/pin/tftp v2.1.0+incompatible
+## explicit
+github.com/pin/tftp
+github.com/pin/tftp/netascii
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+## explicit
+github.com/pmezard/go-difflib/difflib
+# github.com/ryanuber/go-glob v0.0.0-20140617171557-0067a9abd927
+## explicit
+github.com/ryanuber/go-glob
+# github.com/sigma/bdoor v0.0.0-20160624225336-b9c82b7b3c0b
+## explicit
+github.com/sigma/bdoor
+# github.com/sigma/vmw-guestinfo v0.0.0-20160204083807-95dd4126d6e8
+## explicit
+github.com/sigma/vmw-guestinfo/rpcvmx
+github.com/sigma/vmw-guestinfo/vmcheck
+# github.com/sigma/vmw-ovflib v0.0.0-20150909143614-a99a06f1158f
+## explicit
+github.com/sigma/vmw-ovflib
+# github.com/sirupsen/logrus v1.9.0
+## explicit; go 1.13
+github.com/sirupsen/logrus
+github.com/sirupsen/logrus/hooks/syslog
+# github.com/smartystreets/assertions v1.2.0
+## explicit; go 1.13
+# github.com/smartystreets/goconvey v1.6.1
+## explicit
+# github.com/stretchr/testify v1.8.4
+## explicit; go 1.20
+github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
+# github.com/tredoe/term v0.0.0-20161130133337-e551c64f56c0
+## explicit
+github.com/tredoe/term
+github.com/tredoe/term/sys
+# github.com/vbatts/tar-split v0.9.11
+## explicit
+github.com/vbatts/tar-split/archive/tar
+github.com/vbatts/tar-split/tar/asm
+github.com/vbatts/tar-split/tar/storage
+# github.com/vishvananda/netlink v0.0.0-00010101000000-000000000000 => github.com/burmilla/netlink v0.0.0-20191127081807-b76f71f1d337
+## explicit
+github.com/vishvananda/netlink
+github.com/vishvananda/netlink/nl
+# github.com/vishvananda/netns v0.0.0-20170219233438-54f0e4339ce7
+## explicit
+github.com/vishvananda/netns
+# github.com/vmware/vmw-guestinfo v0.0.0-20220317130741-510905f0efa3
+## explicit; go 1.12
+github.com/vmware/vmw-guestinfo/bdoor
+github.com/vmware/vmw-guestinfo/message
+github.com/vmware/vmw-guestinfo/rpcout
+# github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f => github.com/xeipuuv/gojsonpointer v0.0.0-20170225233418-6fe8760cad35
+## explicit
+github.com/xeipuuv/gojsonpointer
+# github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 => github.com/xeipuuv/gojsonreference v0.0.0-20150808065054-e02fc20de94c
+## explicit
+github.com/xeipuuv/gojsonreference
+# github.com/xeipuuv/gojsonschema v1.2.0 => github.com/xeipuuv/gojsonschema v0.0.0-20170528113821-0c8571ac0ce1
+## explicit
+github.com/xeipuuv/gojsonschema
+# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+## explicit; go 1.11
+golang.org/x/crypto/ssh/terminal
+# golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+## explicit; go 1.20
+golang.org/x/exp/constraints
+golang.org/x/exp/slices
+# golang.org/x/net v0.0.0-20210428185706-aea814203247
+## explicit; go 1.11
+golang.org/x/net/context
+golang.org/x/net/internal/socks
+golang.org/x/net/proxy
+# golang.org/x/sync v0.3.0
+## explicit; go 1.17
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.1.0
+## explicit; go 1.17
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# gopkg.in/yaml.v2 v2.4.0
+## explicit; go 1.15
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
+# github.com/cloudfoundry-incubator/candiedyaml => github.com/burmilla/candiedyaml v0.0.0-20190123020550-457a86017e98
+# github.com/codegangsta/cli => github.com/burmilla/cli-1 v1.18.1-0.20160809210721-d2b9ba9c38eb
+# github.com/docker/containerd => github.com/burmilla/containerd v0.2.1-0.20210501144658-c5695fa78c8c
+# github.com/docker/docker => github.com/burmilla/docker v0.0.0-20210501162625-1447a2463bc3
+# github.com/opencontainers/runc => github.com/burmilla/runc v0.0.5-0.20160531034625-edc34c4a8c1e
+# github.com/vishvananda/netlink => github.com/burmilla/netlink v0.0.0-20191127081807-b76f71f1d337
+# github.com/docker/distribution => ./third_party/docker/distribution
+# github.com/docker/libnetwork => ./third_party/docker/libnetwork
+# github.com/xeipuuv/gojsonschema => github.com/xeipuuv/gojsonschema v0.0.0-20170528113821-0c8571ac0ce1
+# github.com/xeipuuv/gojsonpointer => github.com/xeipuuv/gojsonpointer v0.0.0-20170225233418-6fe8760cad35
+# github.com/xeipuuv/gojsonreference => github.com/xeipuuv/gojsonreference v0.0.0-20150808065054-e02fc20de94c
+# github.com/docker/go-connections => ./third_party/docker/go-connections
