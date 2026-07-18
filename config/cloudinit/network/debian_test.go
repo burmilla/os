@@ -50,7 +50,7 @@ func TestProcessDebianNetconf(t *testing.T) {
 			t.Fatalf("bad failure state for %q: got %t, want %t", tt.in, failed, tt.fail)
 		}
 		if tt.n != -1 && tt.n != len(interfaces) {
-			t.Fatalf("bad number of interfaces for %q: got %d, want %q", tt.in, len(interfaces), tt.n)
+			t.Fatalf("bad number of interfaces for %q: got %d, want %d", tt.in, len(interfaces), tt.n)
 		}
 	}
 }

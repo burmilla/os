@@ -1,6 +1,6 @@
 module github.com/burmilla/os
 
-go 1.19
+go 1.26.0
 
 replace github.com/cloudfoundry-incubator/candiedyaml => github.com/burmilla/candiedyaml v0.0.0-20190123020550-457a86017e98
 
