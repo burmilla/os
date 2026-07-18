@@ -1,0 +1,8 @@
+#!/bin/bash
+# help: Update go.mod and vendor directory with Go modules
+set -ex
+
+cd $(dirname $0)/..
+
+go mod tidy
+go mod vendor
