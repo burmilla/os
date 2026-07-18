@@ -29,6 +29,8 @@ const (
 	// stay at /sys/fs/cgroup/<controller> for System Docker, the unified
 	// hierarchy is available next to them for software that supports it.
 	cgroupV2Path = "/sys/fs/cgroup/unified"
+	// CGROUP2_SUPER_MAGIC from statfs(2)
+	cgroup2SuperMagic = 0x63677270
 )
 
 var (
@@ -88,18 +90,37 @@ func createDirs(dirs ...string) error {
 	return nil
 }
 
-// cgroupsLegacyV1 reports whether the kernel command line requests the
+// CgroupsLegacyV1 reports whether the kernel command line requests the
 // pre-3.x behavior of mounting every controller on cgroup v1
-// (rancher.cgroups.legacy). The v2 hierarchy is then still mounted but has
-// no controllers, and the console keeps its v1 layout.
-func cgroupsLegacyV1() bool {
+// (rancher.cgroups.legacy). The hybrid v1 layout is then kept in the
+// switched root instead of being replaced by a single cgroup2 mount
+// (see pkg/init/switchroot).
+func CgroupsLegacyV1() bool {
 	if v, ok := cmdline.GetCmdline("rancher.cgroups.legacy").(bool); ok {
 		return v
 	}
 	return false
 }
 
+// cgroup2Mounted reports whether /sys/fs/cgroup itself is a cgroup2 mount,
+// the layout pkg/init/switchroot sets up in the switched root.
+func cgroup2Mounted() bool {
+	var fs syscall.Statfs_t
+	if err := syscall.Statfs("/sys/fs/cgroup", &fs); err != nil {
+		return false
+	}
+	return fs.Type == cgroup2SuperMagic
+}
+
 func mountCgroups(hierarchyConfig map[string]string) error {
+	if cgroup2Mounted() {
+		// switchroot has replaced the hybrid v1 layout with a single
+		// cgroup2 mount; recreating the v1 hierarchies here would make
+		// them visible in the switched root again.
+		log.Debug("cgroup2 is the primary cgroup filesystem, not mounting cgroup v1 hierarchies")
+		return nil
+	}
+
 	f, err := os.Open("/proc/cgroups")
 	if err != nil {
 		return err

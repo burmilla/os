@@ -112,6 +112,24 @@ func copyMoveRoot(rootfs string, rmUsr bool) error {
 	return nil
 }
 
+// switchToCgroupV2 detaches the cgroup mounts the switched root inherited
+// from the initrd (the tmpfs on /sys/fs/cgroup with the v1 controller
+// hierarchies and the unified mount below it) and mounts the cgroup v2
+// unified hierarchy as the only cgroup filesystem on /sys/fs/cgroup, so
+// user mode sees cgroup v2 only while PID 1 keeps its cgroup v1 usage to
+// itself. Booting with rancher.cgroups.legacy skips this and keeps the
+// v1 layout visible in the switched root.
+func switchToCgroupV2() error {
+	log.Debug("Detaching cgroup v1 mounts from /sys/fs/cgroup")
+	if err := syscall.Unmount("/sys/fs/cgroup", syscall.MNT_DETACH); err != nil {
+		return err
+	}
+
+	log.Debug("Mounting cgroup2 to /sys/fs/cgroup")
+	return syscall.Mount("cgroup2", "/sys/fs/cgroup", "cgroup2",
+		syscall.MS_NOSUID|syscall.MS_NODEV|syscall.MS_NOEXEC|syscall.MS_RELATIME, "nsdelegate")
+}
+
 func switchRoot(rootfs, subdir string, rmUsr bool) error {
 	if err := syscall.Unmount(config.OemDir, 0); err != nil {
 		log.Debugf("Not umounting OEM: %v", err)
@@ -165,6 +183,12 @@ func switchRoot(rootfs, subdir string, rmUsr bool) error {
 	log.Debug("chdir /")
 	if err := syscall.Chdir("/"); err != nil {
 		return err
+	}
+
+	if dfs.CgroupsLegacyV1() {
+		log.Debug("Keeping cgroup v1 layout in the switched root")
+	} else if err := switchToCgroupV2(); err != nil {
+		log.Errorf("Failed to replace cgroup v1 mounts with cgroup2: %v", err)
 	}
 
 	log.Debugf("Successfully moved to new root at %s", path.Join(rootfs, subdir))
