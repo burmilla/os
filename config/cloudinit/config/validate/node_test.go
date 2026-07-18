@@ -263,7 +263,7 @@ func TestFindElem(t *testing.T) {
 
 	for _, tt := range tests {
 		if _, found := findElem(tt.context); tt.found != found {
-			t.Errorf("bad find (%q): want %t, got %t", tt.context, tt.found, found)
+			t.Errorf("bad find (%v): want %t, got %t", tt.context, tt.found, found)
 		}
 	}
 }

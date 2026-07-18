@@ -126,9 +126,9 @@ func (h *HTTPClient) GetRetry(rawurl string) ([]byte, error) {
 		data, err := h.Get(dataURL)
 		switch err.(type) {
 		case ErrNetwork:
-			log.Debugf(err.Error())
+			log.Debug(err.Error())
 		case ErrServer:
-			log.Debugf(err.Error())
+			log.Debug(err.Error())
 		case ErrNotFound:
 			return data, err
 		default:
