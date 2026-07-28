@@ -30,6 +30,12 @@ else
     cat scripts/global.cfg | envsubst > ${DIST}/boot/global.cfg
 fi
 
+# GRUB menu for UEFI ISO boots (see package-iso) - uses the same kernel
+# arguments as the Syslinux menu gets from global.cfg
+mkdir -p ${DIST}/boot/grub
+GRUB_APPEND=$(sed -n 's/^APPEND //p' ${DIST}/boot/global.cfg)
+cat scripts/grub.cfg | APPEND="${GRUB_APPEND}" envsubst > ${DIST}/boot/grub/grub.cfg
+
 mkdir -p ./scripts/installer/build/boot
 cp ./bin/ros ./scripts/installer/build
 trap "rm -rf ./scripts/installer/build" EXIT

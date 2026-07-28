@@ -6,10 +6,10 @@ ARG KERNEL_VERSION
 ENV VERSION=${VERSION}
 ENV KERNEL_VERSION=${KERNEL_VERSION}
 
-# not installed atm udev, grub2, kexe-tools
-# parted: partprobe, e2fsprogs: mkfs.ext4, syslinux: extlinux&syslinux
-# e2fsprogs-extra: chattr
-RUN apk --no-cache add syslinux parted e2fsprogs e2fsprogs-extra util-linux
+# not installed atm udev, kexe-tools
+# parted: partprobe, e2fsprogs: mkfs.ext4, syslinux: extlinux&syslinux (incl. efi64 for UEFI)
+# e2fsprogs-extra: chattr, dosfstools: mkfs.vfat for the EFI system partition
+RUN apk --no-cache add syslinux parted e2fsprogs e2fsprogs-extra dosfstools util-linux
 
 COPY conf /scripts/
 COPY ./build/ros /bin/
