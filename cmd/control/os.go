@@ -16,6 +16,7 @@ import (
 	"github.com/burmilla/os/pkg/util"
 	"github.com/burmilla/os/pkg/util/network"
 
+	"github.com/burmilla/os/pkg/libcompose/project"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
@@ -314,8 +315,20 @@ func startUpgradeContainer(image string, stage, force, reboot, kexec, upgradeCon
 			return err
 		}
 
+		// The upgrade container writes the new kernel, initrd and bootloader
+		// cfgs. Rebooting after it failed boots the previous version again and
+		// makes a broken upgrade look like a successful one.
+		exitCode, err := serviceExitCode(context.Background(), container, client)
+		if err != nil {
+			return err
+		}
+
 		if err := container.Delete(context.Background(), options.Delete{}); err != nil {
 			return err
+		}
+
+		if exitCode != 0 {
+			return fmt.Errorf("upgrade failed: os-upgrade exited with code %d, not rebooting", exitCode)
 		}
 
 		if reboot && (force || yes("Continue with reboot")) {
@@ -325,6 +338,25 @@ func startUpgradeContainer(image string, stage, force, reboot, kexec, upgradeCon
 	}
 
 	return nil
+}
+
+// serviceExitCode waits for the (single) container of a one off service and
+// returns the code it exited with.
+func serviceExitCode(ctx context.Context, service project.Service, client dockerClient.APIClient) (int, error) {
+	containers, err := service.Containers(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if len(containers) == 0 {
+		return 0, fmt.Errorf("no %s container found", service.Name())
+	}
+
+	id, err := containers[0].ID()
+	if err != nil {
+		return 0, err
+	}
+
+	return client.ContainerWait(ctx, id)
 }
 
 func parseBody(body []byte) (*Images, error) {
