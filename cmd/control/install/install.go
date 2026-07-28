@@ -1,6 +1,7 @@
 package install
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,14 +12,29 @@ import (
 	"github.com/burmilla/os/pkg/util"
 )
 
-type MenuEntry struct {
-	Name, BootDir, Version, KernelArgs, Append string
+// IsEFIFirmware returns true when the running system was booted via UEFI
+func IsEFIFirmware() bool {
+	_, err := os.Stat("/sys/firmware/efi")
+	return err == nil
 }
-type BootVars struct {
-	BaseName, BootDir string
-	Timeout           uint
-	Fallback          int
-	Entries           []MenuEntry
+
+// GetBootPartition returns the device and filesystem type of the separate
+// boot partition, if there is one. RANCHER_BOOT is the traditional ext4
+// boot partition label, RANCHER_EFI is the FAT32 EFI system partition
+// created by UEFI installs (FAT labels are limited to 11 characters, so
+// RANCHER_BOOT can not be used there).
+func GetBootPartition() (string, string) {
+	for _, label := range []string{"RANCHER_BOOT", "RANCHER_EFI"} {
+		d, t, err := util.Blkid(label)
+		if err != nil {
+			log.Errorf("Failed to run blkid: %s", err)
+			continue
+		}
+		if d != "" {
+			return d, t
+		}
+	}
+	return "", ""
 }
 
 func MountDevice(baseName, device, partition string, raw bool) (string, string, error) {
@@ -44,11 +60,7 @@ func MountDevice(baseName, device, partition string, raw bool) (string, string, 
 		//rootfs := partition
 		// Don't use ResolveDevice - it can fail, whereas `blkid -L LABEL` works more often
 
-		d, _, err := util.Blkid("RANCHER_BOOT")
-		if err != nil {
-			log.Errorf("Failed to run blkid: %s", err)
-		}
-		if d != "" {
+		if d, _ := GetBootPartition(); d != "" {
 			partition = d
 			baseName = filepath.Join(baseName, config.BootDir)
 		} else {
@@ -83,9 +95,15 @@ func GetStatePartition() string {
 	return d
 }
 
-func GetDefaultPartition(device string) string {
+// GetPartition returns the device name of the given partition number,
+// taking care of the "p" separator needed by nvme devices
+func GetPartition(device string, number int) string {
 	if strings.Contains(device, "nvme") {
-		return device + "p1"
+		return fmt.Sprintf("%sp%d", device, number)
 	}
-	return device + "1"
+	return fmt.Sprintf("%s%d", device, number)
+}
+
+func GetDefaultPartition(device string) string {
+	return GetPartition(device, 1)
 }

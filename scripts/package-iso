@@ -28,6 +28,35 @@ cp -r ${DIST}/boot/* ${CD}/boot/
 cp /usr/lib/ISOLINUX/isolinux.bin              ${CD}/boot/isolinux/
 cp /usr/lib/syslinux/modules/bios/ldlinux.c32  ${CD}/boot/isolinux/
 cp /usr/lib/syslinux/modules/bios/*.c32        ${CD}/boot/isolinux/
+
+# UEFI boot support - Syslinux EFI inside an El Torito FAT image.
+# syslinux.efi can only read files from the FAT image it was loaded from,
+# so the kernel, initrd and cfg files have to be copied into it as well.
+EFIBOOT=${BUILD}/efiboot
+rm -rf ${EFIBOOT}
+mkdir -p ${EFIBOOT}/EFI/BOOT
+
+cp /usr/lib/SYSLINUX.EFI/efi64/syslinux.efi    ${EFIBOOT}/EFI/BOOT/bootx64.efi
+cp /usr/lib/syslinux/modules/efi64/ldlinux.e64 ${EFIBOOT}/EFI/BOOT/
+cp /usr/lib/syslinux/modules/efi64/*.c32       ${EFIBOOT}/EFI/BOOT/
+
+cp ${ARTIFACTS}/${INITRD}                  ${EFIBOOT}/
+cp ${ARTIFACTS}/vmlinuz-${KERNEL_VERSION}  ${EFIBOOT}/
+
+# The BIOS cfg files reference files relative to boot/isolinux/ ("../"),
+# in the FAT image everything except EFI/BOOT lives in the root.
+sed 's|\.\./|/|g' ${CD}/boot/isolinux/isolinux.cfg > ${EFIBOOT}/EFI/BOOT/syslinux.cfg
+for cfg in ${DIST}/boot/*.cfg; do
+    sed 's|\.\./|/|g' ${cfg} > ${EFIBOOT}/$(basename ${cfg})
+done
+
+EFI_IMG=${CD}/boot/isolinux/efiboot.img
+EFI_SIZE_MB=$(( $(du -sm ${EFIBOOT} | cut -f1) + 8 ))
+rm -f ${EFI_IMG}
+dd if=/dev/zero of=${EFI_IMG} bs=1M count=${EFI_SIZE_MB}
+mkfs.vfat ${EFI_IMG}
+mcopy -s -i ${EFI_IMG} ${EFIBOOT}/* ::
+
 # add the installer image to the iso for non-network / dev/test
 cp ${ARTIFACTS}/installer.tar                  ${CD}/rancheros/
 cp ${ARTIFACTS}/Dockerfile.${ARCH}             ${CD}/rancheros/
@@ -37,7 +66,9 @@ cd ${CD} && xorriso \
     -l -J -R -V "${DISTRIB_ID}" \
     -no-emul-boot -boot-load-size 4 -boot-info-table \
     -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
+    -eltorito-alt-boot -e boot/isolinux/efiboot.img -no-emul-boot \
     -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+    -isohybrid-gpt-basdat \
     -o $ISO ${CD}
 
 cd $(dirname $ISO)

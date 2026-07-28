@@ -35,6 +35,7 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         rsync \
         sudo \
         syslinux-common \
+        syslinux-efi \
         vim \
         wget \
         xorriso \
