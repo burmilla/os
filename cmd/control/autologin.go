@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
@@ -29,6 +31,13 @@ func AutologinMain() {
 }
 
 func autologinAction(c *cli.Context) error {
+	// login from util-linux (Debian 13 and later consoles) calls vhangup()
+	// on the tty, which sends SIGHUP to every other process holding the tty
+	// open — including this one. Ignore it so we keep waiting for the child
+	// instead of dying, which would make respawn restart agetty on top of
+	// the freshly started session.
+	signal.Ignore(syscall.SIGHUP)
+
 	cmd := exec.Command("/bin/stty", "sane")
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
