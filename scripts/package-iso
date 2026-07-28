@@ -28,6 +28,44 @@ cp -r ${DIST}/boot/* ${CD}/boot/
 cp /usr/lib/ISOLINUX/isolinux.bin              ${CD}/boot/isolinux/
 cp /usr/lib/syslinux/modules/bios/ldlinux.c32  ${CD}/boot/isolinux/
 cp /usr/lib/syslinux/modules/bios/*.c32        ${CD}/boot/isolinux/
+
+# UEFI boot support. Syslinux EFI can not be used here: syslinux.efi hangs
+# when it is started from an El Torito image (a long standing upstream
+# limitation - this is why practically all distro ISOs use GRUB for UEFI
+# even when they use ISOLINUX for BIOS). So a standalone GRUB image is used
+# as the UEFI first stage for the ISO only - it loads boot/grub/grub.cfg,
+# the kernel and the initrd directly from this ISO/USB media. Syslinux is
+# still used for BIOS ISO boots and on all installed systems (extlinux on
+# BIOS, syslinux.efi on the EFI system partition on UEFI).
+EFIBOOT=${BUILD}/efiboot
+rm -rf ${EFIBOOT}
+mkdir -p ${EFIBOOT}/EFI/BOOT
+
+# find the ISO/USB media by its filesystem label and load the menu from it,
+# with a fallback for media where the ISO content was extracted to the boot
+# filesystem itself (e.g. rufus in extract mode)
+cat > ${BUILD}/early-grub.cfg << EOF
+search --no-floppy --set=root --label "${DISTRIB_ID}"
+if [ -e (\$root)/boot/grub/grub.cfg ]; then
+    configfile (\$root)/boot/grub/grub.cfg
+else
+    configfile /boot/grub/grub.cfg
+fi
+EOF
+
+grub-mkstandalone \
+    --format=x86_64-efi \
+    --output=${EFIBOOT}/EFI/BOOT/bootx64.efi \
+    --locales= --fonts= --themes= \
+    "boot/grub/grub.cfg=${BUILD}/early-grub.cfg"
+
+EFI_IMG=${CD}/boot/isolinux/efiboot.img
+EFI_SIZE_MB=$(( $(du -sm ${EFIBOOT} | cut -f1) + 4 ))
+rm -f ${EFI_IMG}
+dd if=/dev/zero of=${EFI_IMG} bs=1M count=${EFI_SIZE_MB}
+mkfs.vfat ${EFI_IMG}
+mcopy -s -i ${EFI_IMG} ${EFIBOOT}/* ::
+
 # add the installer image to the iso for non-network / dev/test
 cp ${ARTIFACTS}/installer.tar                  ${CD}/rancheros/
 cp ${ARTIFACTS}/Dockerfile.${ARCH}             ${CD}/rancheros/
@@ -37,7 +75,9 @@ cd ${CD} && xorriso \
     -l -J -R -V "${DISTRIB_ID}" \
     -no-emul-boot -boot-load-size 4 -boot-info-table \
     -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
+    -eltorito-alt-boot -e boot/isolinux/efiboot.img -no-emul-boot \
     -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+    -isohybrid-gpt-basdat \
     -o $ISO ${CD}
 
 cd $(dirname $ISO)
