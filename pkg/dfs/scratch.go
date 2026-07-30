@@ -442,10 +442,8 @@ func PrepareFs(config *Config) error {
 		return err
 	}
 
-	if util.GetHypervisor() != "wsl2" {
-		if err := mountCgroupV2(); err != nil {
-			return err
-		}
+	if err := mountCgroupV2(); err != nil {
+		return err
 	}
 
 	if err := createLayout(config); err != nil {
