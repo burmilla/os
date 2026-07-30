@@ -24,7 +24,8 @@ const (
 	iptables      = "/sbin/iptables"
 	modprobe      = "/sbin/modprobe"
 	distSuffix    = ".dist"
-	cgroupV2Path  = "/sys/fs/cgroup"
+	cgroupRoot    = "/sys/fs/cgroup"
+	cgroupV2Fs    = "cgroup2"
 )
 
 var (
@@ -36,9 +37,17 @@ var (
 		{"none", "/proc", "proc", ""},
 		{"none", "/run", "tmpfs", ""},
 		{"none", "/sys", "sysfs", ""},
-		{"none", "/sys/fs/cgroup", "tmpfs", ""},
 		{"debugfs", "/sys/kernel/debug", "debugfs", ""},
 	}
+
+	// The unified hierarchy is mounted directly on /sys/fs/cgroup, it must not
+	// be preceded by the tmpfs which the cgroup v1 layout used as a container
+	// for the per controller hierarchies.
+	cgroupV2Mount = []string{cgroupV2Fs, cgroupRoot, cgroupV2Fs, "rw,nosuid,nodev,noexec,relatime,nsdelegate"}
+
+	// Controllers which are delegated to the first level of the unified
+	// hierarchy when the kernel makes them available.
+	cgroupV2Controllers = []string{"cpu", "cpuset", "io", "memory", "pids", "hugetlb", "rdma", "misc"}
 )
 
 type Config struct {
@@ -83,16 +92,70 @@ func createDirs(dirs ...string) error {
 	return nil
 }
 
-// mountCgroupV2 mounts the cgroup v2 unified hierarchy beside the v1
-// controller hierarchies (systemd-style "hybrid" layout). Controllers that
-// are mounted on a v1 hierarchy stay there, so System Docker keeps working,
-// while v2-aware software can use the unified hierarchy.
+// mountCgroupV2 mounts the cgroup v2 unified hierarchy on /sys/fs/cgroup and
+// delegates the available controllers to the first level of the tree.
 func mountCgroupV2() error {
-	if err := createDirs(cgroupV2Path); err != nil {
+	if err := createDirs(cgroupRoot); err != nil {
 		return err
 	}
 
-	return createMounts([][]string{{"cgroup2", cgroupV2Path, "cgroup2", "rw,nosuid,nodev,noexec,relatime,nsdelegate"}}...)
+	fsType, err := util.GetMountFsType(cgroupRoot)
+	if err != nil {
+		return err
+	}
+
+	switch fsType {
+	case cgroupV2Fs:
+		log.Debugf("%s is already a cgroup v2 mount", cgroupRoot)
+	case "":
+		if err := createMounts(cgroupV2Mount); err != nil {
+			return err
+		}
+	default:
+		// Anything else on /sys/fs/cgroup, a leftover tmpfs or a v1
+		// hierarchy, would just hide the unified hierarchy, so it has to
+		// go before cgroup2 can be mounted.
+		log.Infof("Unmounting %s (%s) to mount the cgroup v2 hierarchy", cgroupRoot, fsType)
+		if err := util.Unmount(cgroupRoot); err != nil {
+			return err
+		}
+		if err := createMounts(cgroupV2Mount); err != nil {
+			return err
+		}
+	}
+
+	enableCgroupV2Controllers()
+
+	return nil
+}
+
+// enableCgroupV2Controllers makes the controllers of the root cgroup available
+// to its children. Without this only the processes living in the root cgroup
+// itself could be accounted and limited. Failures are not fatal, the kernel
+// may simply not have the controller compiled in or it may be in use already.
+func enableCgroupV2Controllers() {
+	available, err := ioutil.ReadFile(path.Join(cgroupRoot, "cgroup.controllers"))
+	if err != nil {
+		log.Errorf("Failed to read cgroup v2 controllers: %v", err)
+		return
+	}
+
+	enabled := map[string]bool{}
+	for _, controller := range strings.Fields(string(available)) {
+		enabled[controller] = true
+	}
+
+	subtreeControl := path.Join(cgroupRoot, "cgroup.subtree_control")
+	for _, controller := range cgroupV2Controllers {
+		if !enabled[controller] {
+			continue
+		}
+		if err := ioutil.WriteFile(subtreeControl, []byte("+"+controller), 0644); err != nil {
+			log.Warnf("Failed to enable cgroup v2 controller %s: %v", controller, err)
+			continue
+		}
+		log.Debugf("Enabled cgroup v2 controller %s", controller)
+	}
 }
 
 func CreateSymlinks(pathSets [][]string) error {
@@ -110,27 +173,6 @@ func CreateSymlink(src, dest string) error {
 		log.Debugf("Symlinking %s => %s", dest, src)
 		if err = os.Symlink(src, dest); err != nil {
 			return err
-		}
-	}
-
-	return nil
-}
-
-func mountCgroup(cgroup string) error {
-	if err := createDirs("/sys/fs/cgroup/" + cgroup); err != nil {
-		return err
-	}
-
-	if err := createMounts([][]string{{"none", "/sys/fs/cgroup/" + cgroup, "cgroup", cgroup}}...); err != nil {
-		return err
-	}
-
-	parts := strings.Split(cgroup, ",")
-	if len(parts) > 1 {
-		for _, part := range parts {
-			if err := CreateSymlink("/sys/fs/cgroup/"+cgroup, "/sys/fs/cgroup/"+part); err != nil {
-				return err
-			}
 		}
 	}
 

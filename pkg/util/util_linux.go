@@ -94,6 +94,26 @@ func Unmount(target string) error {
 	return mount.Unmount(target)
 }
 
+// GetMountFsType returns the filesystem type of the topmost filesystem mounted
+// on target or an empty string when nothing is mounted there.
+func GetMountFsType(target string) (string, error) {
+	mounts, err := mount.GetMounts()
+	if err != nil {
+		return "", err
+	}
+
+	fsType := ""
+	for _, m := range mounts {
+		// Mounts are listed in mount order, so the last entry matching
+		// target is the filesystem which is currently visible on it.
+		if m.Mountpoint == target {
+			fsType = m.Fstype
+		}
+	}
+
+	return fsType, nil
+}
+
 func Blkid(label string) (deviceName, deviceType string, err error) {
 	// Not all blkid's have `blkid -L label (see busybox/alpine)
 	cmd := exec.Command("blkid")
