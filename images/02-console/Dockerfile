@@ -3,7 +3,11 @@ FROM debian:bullseye-slim
 COPY build/sshd_config.append.tpl /etc/ssh/
 COPY build/lsb-release /etc/
 
-RUN apt-get update \
+# Use archive repo and fix udev version conflict
+RUN sed -ri "s/deb.debian.org/archive.debian.org/g;/debian-security/d" /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y --allow-downgrades libudev1=247.3-7+deb11u5 udev=247.3-7+deb11u5 \
+    \
     && apt-get install -y --no-install-recommends fdisk eject ipset iptables openssh-server rsync locales \
                            sudo less curl ca-certificates psmisc htop kmod iproute2 \
                            net-tools bash-completion wget \
