@@ -16,8 +16,8 @@ import (
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/netconf"
 
+	"context"
 	"github.com/docker/libnetwork/resolvconf"
-	"golang.org/x/net/context"
 )
 
 var funcMap = template.FuncMap{

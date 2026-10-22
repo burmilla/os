@@ -20,7 +20,6 @@ import (
 	"github.com/burmilla/os/pkg/util"
 
 	"github.com/codegangsta/cli"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 const (
@@ -486,7 +485,8 @@ func setupSSH(cfg *config.CloudConfig) error {
 
 func istty(name string) bool {
 	if f, err := os.Open(fmt.Sprintf("/dev/%s", name)); err == nil {
-		return terminal.IsTerminal(int(f.Fd()))
+		fi, err := f.Stat()
+		return err == nil && fi.Mode()&os.ModeCharDevice != 0
 	}
 	return false
 }

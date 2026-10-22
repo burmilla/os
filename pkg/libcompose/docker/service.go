@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"context"
 	"github.com/docker/engine-api/types/network"
-	"golang.org/x/net/context"
 
 	"github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/docker/builder"

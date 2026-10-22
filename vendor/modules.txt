@@ -215,9 +215,6 @@ github.com/xeipuuv/gojsonreference
 # github.com/xeipuuv/gojsonschema v1.2.0 => github.com/xeipuuv/gojsonschema v0.0.0-20170528113821-0c8571ac0ce1
 ## explicit
 github.com/xeipuuv/gojsonschema
-# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-## explicit; go 1.11
-golang.org/x/crypto/ssh/terminal
 # golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
 ## explicit; go 1.20
 golang.org/x/exp/constraints
