@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"path"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -373,7 +372,7 @@ func availableEngines(cfg *config.CloudConfig, update bool) []string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	sort.Strings(engines)
+	versions.SortEngines(engines)
 	return engines
 }
 
