@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"runtime"
 	"strings"
 
 	"github.com/burmilla/os/cmd/power"
@@ -195,10 +194,6 @@ func getLatestImage() (string, error) {
 }
 
 func osUpgrade(c *cli.Context) error {
-	if runtime.GOARCH != "amd64" {
-		log.Fatalf("ros install / upgrade only supported on 'amd64', not '%s'", runtime.GOARCH)
-	}
-
 	if isExist := checkGlobalCfg(); !isExist {
 		log.Fatalf("ros upgrade cannot be supported")
 	}
