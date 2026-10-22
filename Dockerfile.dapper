@@ -21,24 +21,18 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         grub-common \
         grub-efi-amd64-bin \
         isolinux \
-        less \
         libblkid-dev \
-        locales \
         kmod \
         mtools \
         openssh-client \
         qemu-system-arm \
         qemu-system-x86 \
         qemu-utils \
-        rsync \
-        sudo \
         syslinux-common \
-        vim \
         wget \
         xorriso \
         xz-utils \
-        zstd \
-        telnet
+        zstd
 
 ########## Dapper Configuration #####################
 
