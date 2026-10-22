@@ -24,7 +24,6 @@ jobs:
           echo "Build is not started from tag. Will exit..."
           exit 1
         fi
-        export OS_FIRMWARE=${{ github.event.inputs.firmware }}
         export ARCH=amd64
         make release
 
