@@ -16,8 +16,6 @@ github.com/burmilla/runc v0.0.5-0.20160531034625-edc34c4a8c1e h1:Oh7oL4II3gkqJHE
 github.com/burmilla/runc v0.0.5-0.20160531034625-edc34c4a8c1e/go.mod h1:6qgG62t66EZI+ChvQIbGBtkpCEJkHmHEwrObKZZhdxE=
 github.com/compose-spec/compose-go v1.20.2 h1:u/yfZHn4EaHGdidrZycWpxXgFffjYULlTbRfJ51ykjQ=
 github.com/compose-spec/compose-go v1.20.2/go.mod h1:+MdqXV4RA7wdFsahh/Kb8U0pAJqkg7mr4PM9tFKU8RM=
-github.com/coreos/yaml v0.0.0-20141224210557-6b16a5714269 h1:/1sjrpK5Mb6IwyFOKd+u7321tXfNAsj0Ci8CivZmSlo=
-github.com/coreos/yaml v0.0.0-20141224210557-6b16a5714269/go.mod h1:Bl1D/T9QJhVdu6eFoLrGxN90+admDLGaLz2HXH/VzDc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
