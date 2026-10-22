@@ -299,11 +299,9 @@ func (s *Service) up(ctx context.Context, imageName string, create bool, options
 	logrus.Debugf("Found %d existing containers for service %s", len(containers), s.name)
 
 	if len(containers) == 0 && create {
-		c, err := s.createOne(ctx, imageName)
-		if err != nil {
+		if _, err := s.createOne(ctx, imageName); err != nil {
 			return err
 		}
-		containers = []*Container{c}
 	}
 
 	return s.eachContainer(ctx, func(c *Container) error {
