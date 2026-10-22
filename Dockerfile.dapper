@@ -26,7 +26,6 @@ RUN echo "Acquire::http { Proxy \"$APTPROXY\"; };" >> /etc/apt/apt.conf.d/01prox
         less \
         libblkid-dev \
         libmount-dev \
-        libselinux1-dev \
         locales \
         module-init-tools \
         mtools \

@@ -8,8 +8,6 @@ package util
 #include<blkid/blkid.h>
 #include<libmount/libmount.h>
 #include<stdlib.h>
-#cgo pkg-config: libselinux libsepol
-#include <selinux/selinux.h>
 */
 import "C"
 import (
