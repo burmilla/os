@@ -16,7 +16,6 @@ burmillaos-${VERSION}-digitalocean.img
 burmillaos-${VERSION}-openstack.img
 burmillaos-${VERSION}-gce.tar.gz
 burmillaos-${VERSION}-raspberry-pi64.zip
-burmillaos-${VERSION}-4glte.iso
 burmillaos-${VERSION}-hyperv.iso
 burmillaos-${VERSION}-proxmoxve.iso
 burmillaos-${VERSION}-vmware.iso
