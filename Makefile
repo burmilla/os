@@ -38,9 +38,6 @@ release-build:
 	mkdir -p dist
 	./.dapper release
 
-rpi64: .dapper
-	./scripts/release-rpi64
-
 vmware: .dapper
 	mkdir -p dist
 	OS_FIRMWARE="false" \
