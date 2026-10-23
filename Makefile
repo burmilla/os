@@ -41,7 +41,7 @@ release-build:
 vmware: .dapper
 	mkdir -p dist
 	OS_FIRMWARE="false" \
-	APPEND_SYSTEM_IMAGES="burmilla/os-openvmtools:12.2.5-1" \
+	APPEND_SYSTEM_IMAGES="burmilla/os-openvmtools:12.5-1" \
 	./.dapper release
 
 hyperv: .dapper
