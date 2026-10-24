@@ -13,6 +13,9 @@ on:
         required: false
         default: ''
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -40,3 +43,15 @@ jobs:
           dist/artifacts/initrd-*
           dist/artifacts/vmlinuz-*
           dist/artifacts/rootfs.tar.gz
+
+    # Workflow artifacts are served from Azure blob storage, which is not
+    # reachable from every network. Keep a copy on a draft release too.
+    - name: Upload to draft release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        TAG=build-test-${GITHUB_SHA::8}
+        cd dist/artifacts
+        gh release create "$TAG" --draft --prerelease --title "build-test $TAG" \
+          --notes "Test build of ${GITHUB_REF_NAME} (${GITHUB_SHA}) by the build-test workflow. Not a release." \
+          burmillaos.iso initrd-* vmlinuz-* rootfs.tar.gz
