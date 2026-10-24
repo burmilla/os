@@ -1,0 +1,39 @@
+name: build-test
+
+# Builds the OS from any branch without publishing anything and keeps
+# the ISO, kernel, initrd and rootfs as workflow artifacts for boot tests.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'VERSION to build as (default: short commit id)'
+        required: false
+        default: ''
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: '0'
+
+    - name: Build OS
+      run: |
+        if [ -n "${{ github.event.inputs.version }}" ]; then
+          export VERSION="${{ github.event.inputs.version }}"
+        fi
+        export ARCH=amd64
+        make release
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: burmillaos-${{ github.event.inputs.version || github.sha }}
+        if-no-files-found: error
+        retention-days: 7
+        path: |
+          dist/artifacts/burmillaos.iso
+          dist/artifacts/initrd-*
+          dist/artifacts/vmlinuz-*
+          dist/artifacts/rootfs.tar.gz
