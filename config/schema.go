@@ -50,6 +50,7 @@ var schema = `{
 				"upgrade": {"$ref": "#/definitions/upgrade_config"},
 				"docker": {"$ref": "#/definitions/docker_config"},
 				"k3s": {"$ref": "#/definitions/k3s_config"},
+				"qemu": {"$ref": "#/definitions/qemu_config"},
 				"registry_auths": {"type": "object"},
 				"defaults": {"$ref": "#/definitions/defaults_config"},
 				"resize_device": {"type": "string"},
@@ -159,6 +160,19 @@ var schema = `{
 				"config": {"type": "object"},
 				"extra_args": {"$ref": "#/definitions/list_of_strings"},
 				"environment": {"$ref": "#/definitions/list_of_strings"}
+			}
+		},
+
+		"qemu_config": {
+			"id": "#/definitions/qemu_config",
+			"type": "object",
+			"additionalProperties": false,
+
+			"properties": {
+				"command": {"type": "string"},
+				"extra_args": {"$ref": "#/definitions/list_of_strings"},
+				"environment": {"$ref": "#/definitions/list_of_strings"},
+				"tools": {"$ref": "#/definitions/list_of_strings"}
 			}
 		},
 

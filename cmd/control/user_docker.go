@@ -83,6 +83,11 @@ func copyBinaries(source, dest string) error {
 	}
 
 	files, err = ioutil.ReadDir(source)
+	if os.IsNotExist(err) {
+		// an engine whose tools run in its own container ships no binaries
+		// for the console; the previous engine's binaries were removed above
+		return nil
+	}
 	if err != nil {
 		return err
 	}

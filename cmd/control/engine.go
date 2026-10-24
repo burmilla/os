@@ -156,7 +156,8 @@ func engineSwitch(c *cli.Context) error {
 
 	// Stop the running engine first: only one engine runs at a time and the
 	// new one may be of another type (e.g. K3s replacing Docker).
-	if _, currentService := CurrentEngine(); currentService != "" {
+	_, currentService := CurrentEngine()
+	if currentService != "" {
 		if err = stopEngineService(project, currentService); err != nil {
 			log.Fatal(err)
 		}
@@ -170,6 +171,13 @@ func engineSwitch(c *cli.Context) error {
 	if err = project.Up(context.Background(), options.Up{}, serviceName); err != nil {
 		log.Fatal(err)
 	}
+
+	// This runs in the console: refresh the console tools of engines that do
+	// not set them up themselves from inside the console.
+	if currentService != "" && currentService != serviceName {
+		unlinkEngineBinaries(cfg, currentService)
+	}
+	linkEngineBinaries(cfg, serviceName)
 
 	return setEngine(cfg, newEngine)
 }

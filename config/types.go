@@ -147,6 +147,7 @@ type RancherConfig struct {
 	Upgrade             UpgradeConfig                             `yaml:"upgrade,omitempty"`
 	Docker              DockerConfig                              `yaml:"docker,omitempty"`
 	K3s                 K3sConfig                                 `yaml:"k3s,omitempty"`
+	Qemu                QemuConfig                                `yaml:"qemu,omitempty"`
 	RegistryAuths       map[string]types.AuthConfig               `yaml:"registry_auths,omitempty"`
 	Defaults            Defaults                                  `yaml:"defaults,omitempty"`
 	ResizeDevice        string                                    `yaml:"resize_device,omitempty"`
@@ -211,6 +212,18 @@ type K3sConfig struct {
 	Config      map[string]interface{} `yaml:"config,omitempty"`
 	ExtraArgs   []string               `yaml:"extra_args,flow,omitempty"`
 	Environment []string               `yaml:"environment,omitempty"`
+}
+
+// QemuConfig configures the QEMU engine (rancher.engine: qemu), which runs
+// libvirt and QEMU in the engine container.
+type QemuConfig struct {
+	// Command is the libvirt daemon to run, libvirtd by default.
+	Command     string   `yaml:"command,omitempty"`
+	ExtraArgs   []string `yaml:"extra_args,flow,omitempty"`
+	Environment []string `yaml:"environment,omitempty"`
+	// Tools are the commands of the engine container made available in the
+	// console as wrapper scripts: virsh, virt-install and qemu-img by default.
+	Tools []string `yaml:"tools,omitempty"`
 }
 
 type SSHConfig struct {

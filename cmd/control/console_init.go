@@ -192,7 +192,6 @@ func consoleInitFunc() error {
 	}
 
 	baseSymlink := symLinkEngineBinary()
-	baseSymlink = append(baseSymlink, engineBinarySymlinks(cfg.SelectedEngineType())...)
 
 	if _, err := os.Stat(dockerCompletionFile); err == nil {
 		baseSymlink = append(baseSymlink, symlink{
@@ -206,6 +205,9 @@ func consoleInitFunc() error {
 			log.Error(err)
 		}
 	}
+
+	// tools of the selected engine, when it is not Docker
+	linkEngineBinaries(cfg, cfg.SelectedEngineType())
 
 	// font backslashes need to be escaped for when issue is output! (but not the others..)
 	if err := ioutil.WriteFile("/etc/issue", []byte(config.Banner), 0644); err != nil {

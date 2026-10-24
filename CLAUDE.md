@@ -9,7 +9,7 @@ A minimal Linux where almost everything runs in containers:
 - **Kernel** comes from `burmilla/os-kernel` releases (`KERNEL_VERSION` in `Dockerfile.dapper`).
 - **initrd and rootfs** are built from buildroot tarballs published by `burmilla/os-initrd-base` and `burmilla/os-base` (`OS_INITRD_BASE_URL_*`, `OS_BASE_URL_*`).
 - **System Docker** (PID 1 side, stripped Docker 17.06 from `burmilla/os-system-docker`) runs system services: console, ntp, syslog, udev, network, user Docker, etc.
-- **User Docker** runs inside the console container's namespaces; the engine is selected with `rancher.engine` / `ros engine switch` from the `engines` list of the `burmilla/os-services` index (`<type>-<version>`, e.g. `docker-29.9.2`; a bare type such as `docker` means the latest one). `rancher.docker.engine` is the legacy key.
+- **User Docker** runs inside the console container's namespaces; the engine is selected with `rancher.engine` / `ros engine switch` from the `engines` list of the `burmilla/os-services` index (`<type>-<version>`, e.g. `docker-29.9.2`; a bare type such as `docker` means the latest one). `rancher.docker.engine` is the legacy key. Engine types: `docker` (default), `k3s` (runs in the console like Docker, `cmd/control/k3s.go`) and `qemu` (libvirt in its own container with `virsh` wrappers in the console, `cmd/control/qemu.go`); the engine image's service runs `ros engine-start <type>` (`cmd/control/engine_start.go`).
 - **`ros`** (this repo, one multicall Go binary) is init, the CLI and most helpers (`cloud-init-save`, `console-init`, `docker-init`, `respawn`, ...). `main.go` dispatches on `argv[0]`.
 
 ## Repository layout

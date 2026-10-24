@@ -26,6 +26,9 @@ type engineStarter struct {
 	// links are the console paths to create for the engine binaries, in
 	// addition to one /usr/bin link per file in /var/lib/rancher/engine.
 	links []symlink
+	// scripts returns wrapper scripts to write into the console, by path,
+	// for engines whose tools run in the engine container.
+	scripts func(cfg *config.CloudConfig) map[string]string
 }
 
 var engineStarters = map[string]engineStarter{
@@ -70,9 +73,10 @@ func engineInitAction(c *cli.Context) error {
 		log.Error(err)
 	}
 
-	linkEngineBinaries(c.Args()[0])
+	cfg := config.LoadConfig()
+	linkEngineBinaries(cfg, c.Args()[0])
 
-	return starter.init(config.LoadConfig(), c.Args()[1:])
+	return starter.init(cfg, c.Args()[1:])
 }
 
 func engineStarterFor(args []string) (engineStarter, error) {
@@ -127,7 +131,9 @@ func engineBinarySymlinks(engineType string) []symlink {
 	return append(links, starter.links...)
 }
 
-func linkEngineBinaries(engineType string) {
+// linkEngineBinaries makes the tools of an engine type available in the
+// console: links to its binaries and wrapper scripts.
+func linkEngineBinaries(cfg *config.CloudConfig, engineType string) {
 	for _, link := range engineBinarySymlinks(engineType) {
 		syscall.Unlink(link.newname)
 		if _, err := os.Stat(link.oldname); err != nil {
@@ -137,6 +143,33 @@ func linkEngineBinaries(engineType string) {
 			log.Error(err)
 		}
 	}
+	for file, content := range engineScripts(cfg, engineType) {
+		if err := ioutil.WriteFile(file, []byte(content), 0755); err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+// unlinkEngineBinaries removes what linkEngineBinaries created, when the
+// engine type is switched. Links to binaries of the Docker engine are kept:
+// they dangle until Docker runs again, like before Docker started.
+func unlinkEngineBinaries(cfg *config.CloudConfig, engineType string) {
+	for _, link := range engineBinarySymlinks(engineType) {
+		if target, err := os.Readlink(link.newname); err == nil && target == link.oldname {
+			syscall.Unlink(link.newname)
+		}
+	}
+	for file := range engineScripts(cfg, engineType) {
+		os.Remove(file)
+	}
+}
+
+func engineScripts(cfg *config.CloudConfig, engineType string) map[string]string {
+	starter, ok := engineStarters[engineType]
+	if !ok || starter.scripts == nil {
+		return nil
+	}
+	return starter.scripts(cfg)
 }
 
 // writeEngineConfig writes a configuration file for an engine, creating

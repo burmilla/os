@@ -69,7 +69,7 @@ func Main() {
 		},
 		{
 			Name:        "engine",
-			Usage:       "manage which engine (Docker, K3s, ...) is used",
+			Usage:       "manage which engine (Docker, K3s, QEMU) is used",
 			HideHelp:    true,
 			Subcommands: engineSubcommands(),
 		},

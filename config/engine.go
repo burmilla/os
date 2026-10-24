@@ -10,10 +10,11 @@ import "strings"
 const (
 	EngineDocker = "docker"
 	EngineK3s    = "k3s"
+	EngineQemu   = "qemu"
 )
 
 // EngineTypes lists the engine types ros knows how to start.
-var EngineTypes = []string{EngineDocker, EngineK3s}
+var EngineTypes = []string{EngineDocker, EngineK3s, EngineQemu}
 
 // IsEngineType reports whether name is a bare engine type such as "docker",
 // which selects the latest available engine of that type.
