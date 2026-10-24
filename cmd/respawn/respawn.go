@@ -25,9 +25,20 @@ import (
 // command is enabled again after a reboot.
 const DisabledDir = "/run/respawn.disabled"
 
+// PidFile is where respawn writes its PID, so that other containers which
+// share /run (e.g. ros console access disable) can send it SIGHUP after
+// adding a marker to DisabledDir. respawn then stops the processes of the
+// disabled commands.
+const PidFile = "/run/respawn.pid"
+
+type process struct {
+	*os.Process
+	command string
+}
+
 var (
 	running     = true
-	processes   = map[int]*os.Process{}
+	processes   = map[int]process{}
 	processLock = sync.Mutex{}
 )
 
@@ -56,7 +67,7 @@ func Main() {
 	app.Run(os.Args)
 }
 
-func setupSigterm() {
+func setupSignals() {
 	sigtermChan := make(chan os.Signal, 1)
 	signal.Notify(sigtermChan, syscall.SIGTERM)
 	go func() {
@@ -64,10 +75,20 @@ func setupSigterm() {
 			termPids()
 		}
 	}()
+	sighupChan := make(chan os.Signal, 1)
+	signal.Notify(sighupChan, syscall.SIGHUP)
+	go func() {
+		for range sighupChan {
+			termDisabled()
+		}
+	}()
 }
 
 func run(c *cli.Context) error {
-	setupSigterm()
+	setupSignals()
+	if err := ioutil.WriteFile(PidFile, []byte(fmt.Sprintf("%d\n", os.Getpid())), 0644); err != nil {
+		log.Errorf("Failed to write %s: %v", PidFile, err)
+	}
 
 	var stream io.Reader = os.Stdin
 	var err error
@@ -104,10 +125,10 @@ func run(c *cli.Context) error {
 	return nil
 }
 
-func addProcess(process *os.Process) {
+func addProcess(p *os.Process, command string) {
 	processLock.Lock()
 	defer processLock.Unlock()
-	processes[process.Pid] = process
+	processes[p.Pid] = process{Process: p, command: command}
 }
 
 func removeProcess(process *os.Process) {
@@ -125,6 +146,38 @@ func termPids() {
 		log.Infof("sending SIGTERM to %d", process.Pid)
 		process.Signal(syscall.SIGTERM)
 	}
+}
+
+// termDisabled stops the running processes of the commands which have been
+// disabled since they were started (SIGHUP). The command is not started
+// again until its marker is removed. Processes which do not exit on SIGTERM
+// within a few seconds (e.g. an interactive shell started by agetty) are
+// killed.
+func termDisabled() {
+	processLock.Lock()
+	defer processLock.Unlock()
+
+	for _, p := range processes {
+		if !Disabled(p.command) {
+			continue
+		}
+		log.Infof("%s : disabled, sending SIGTERM to %d", p.command, p.Pid)
+		if err := p.Signal(syscall.SIGTERM); err != nil {
+			continue
+		}
+		go killAfter(p, 5*time.Second)
+	}
+}
+
+func killAfter(p process, d time.Duration) {
+	time.Sleep(d)
+	processLock.Lock()
+	defer processLock.Unlock()
+	if current, ok := processes[p.Pid]; !ok || current.Process != p.Process {
+		return
+	}
+	log.Infof("%s : %d did not exit, sending SIGKILL", p.command, p.Pid)
+	p.Signal(syscall.SIGKILL)
 }
 
 func execute(line string, doneChannel chan string) {
@@ -153,7 +206,7 @@ func execute(line string, doneChannel chan string) {
 		}
 
 		if err := cmd.Start(); err == nil {
-			addProcess(cmd.Process)
+			addProcess(cmd.Process, args[0])
 			if err = cmd.Wait(); err != nil {
 				log.Errorf("Wait cmd to exit: %s, err: %v", line, err)
 			}

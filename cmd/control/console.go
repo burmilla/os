@@ -58,6 +58,11 @@ func consoleSubcommands() []cli.Command {
 			Usage:       "disable or enable sshd of the console",
 			Subcommands: sshdSubcommands(),
 		},
+		{
+			Name:        "access",
+			Usage:       "disable or enable interactive access to the console (sshd and tty logins)",
+			Subcommands: consoleAccessSubcommands(),
+		},
 	}
 }
 
