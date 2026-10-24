@@ -7,7 +7,6 @@ import (
 	"path"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/log"
@@ -25,13 +24,11 @@ const (
 )
 
 func dockerInitAction(c *cli.Context) error {
-	// TODO: this should be replaced by a "Console ready event watcher"
-	for {
-		if _, err := os.Stat(consoleDone); err == nil {
-			break
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
+	return dockerInit(c.Args())
+}
+
+func dockerInit(dockerArgs []string) error {
+	waitForConsole()
 
 	if _, err := os.Stat(dockerCompletionFile); err != nil {
 		if _, err := os.Readlink(dockerCompletionLinkFile); err == nil {
@@ -104,7 +101,7 @@ func dockerInitAction(c *cli.Context) error {
 	args := []string{
 		"bash",
 		"-c",
-		fmt.Sprintf(`[ -e %s ] && source %s; exec /usr/bin/dockerlaunch %s %s $DOCKER_OPTS >> %s 2>&1`, dockerConf, dockerConf, dockerBin, strings.Join(c.Args(), " "), dockerLog),
+		fmt.Sprintf(`[ -e %s ] && source %s; exec /usr/bin/dockerlaunch %s %s $DOCKER_OPTS >> %s 2>&1`, dockerConf, dockerConf, dockerBin, strings.Join(dockerArgs, " "), dockerLog),
 	}
 
 	// TODO: this should be replaced by a "Docker ready event watcher"

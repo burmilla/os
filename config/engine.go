@@ -9,10 +9,11 @@ import "strings"
 // an engine defines one service named after its type, e.g. "docker".
 const (
 	EngineDocker = "docker"
+	EngineK3s    = "k3s"
 )
 
 // EngineTypes lists the engine types ros knows how to start.
-var EngineTypes = []string{EngineDocker}
+var EngineTypes = []string{EngineDocker, EngineK3s}
 
 // IsEngineType reports whether name is a bare engine type such as "docker",
 // which selects the latest available engine of that type.

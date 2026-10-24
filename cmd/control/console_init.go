@@ -192,6 +192,7 @@ func consoleInitFunc() error {
 	}
 
 	baseSymlink := symLinkEngineBinary()
+	baseSymlink = append(baseSymlink, engineBinarySymlinks(cfg.SelectedEngineType())...)
 
 	if _, err := os.Stat(dockerCompletionFile); err == nil {
 		baseSymlink = append(baseSymlink, symlink{

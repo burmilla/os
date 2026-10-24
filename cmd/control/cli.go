@@ -69,9 +69,23 @@ func Main() {
 		},
 		{
 			Name:        "engine",
-			Usage:       "manage which engine (Docker, ...) is used",
+			Usage:       "manage which engine (Docker, K3s, ...) is used",
 			HideHelp:    true,
 			Subcommands: engineSubcommands(),
+		},
+		{
+			Name:            "engine-init",
+			Hidden:          true,
+			HideHelp:        true,
+			SkipFlagParsing: true,
+			Action:          engineInitAction,
+		},
+		{
+			Name:            "engine-start",
+			Hidden:          true,
+			HideHelp:        true,
+			SkipFlagParsing: true,
+			Action:          engineStartAction,
 		},
 		{
 			Name:            "entrypoint",

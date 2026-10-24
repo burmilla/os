@@ -159,6 +159,7 @@ rancher:
       volumes:
       - /var/lib/user-docker:/var/lib/docker
       - /var/lib/m-user-docker:/var/lib/m-user-docker
+      - /var/lib/k3s/etc:/etc/rancher
     user-volumes:
       image: {{.OS_REPO}}/os-base:{{.VERSION}}{{.SUFFIX}}
       command: echo

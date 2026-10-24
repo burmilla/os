@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"syscall"
@@ -211,6 +212,15 @@ func execInConsole(cfg *config.CloudConfig, storageContext string, env, command 
 	log.Infof("Running %v", cmd)
 
 	return syscall.Exec("/usr/bin/system-docker-runc", cmd, os.Environ())
+}
+
+// execCommand replaces the current process with command, looked up in PATH.
+func execCommand(command []string) error {
+	binary, err := exec.LookPath(command[0])
+	if err != nil {
+		return err
+	}
+	return syscall.Exec(binary, command, os.Environ())
 }
 
 func waitForPid(service string, project *project.Project) (int, error) {

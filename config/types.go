@@ -146,6 +146,7 @@ type RancherConfig struct {
 	SystemDocker        DockerConfig                              `yaml:"system_docker,omitempty"`
 	Upgrade             UpgradeConfig                             `yaml:"upgrade,omitempty"`
 	Docker              DockerConfig                              `yaml:"docker,omitempty"`
+	K3s                 K3sConfig                                 `yaml:"k3s,omitempty"`
 	RegistryAuths       map[string]types.AuthConfig               `yaml:"registry_auths,omitempty"`
 	Defaults            Defaults                                  `yaml:"defaults,omitempty"`
 	ResizeDevice        string                                    `yaml:"resize_device,omitempty"`
@@ -199,6 +200,17 @@ type DockerConfig struct {
 	StorageContext string   `yaml:"storage_context,omitempty"`
 	UserNsEnabled  bool     `yaml:"userns_enabled,omitempty"`
 	Exec           bool     `yaml:"exec,omitempty"`
+}
+
+// K3sConfig configures the K3s engine (rancher.engine: k3s).
+type K3sConfig struct {
+	// Command is the k3s command to run: server (default) or agent.
+	Command string `yaml:"command,omitempty"`
+	// Config is written to /etc/rancher/k3s/config.yaml: k3s flags without
+	// the leading dashes, e.g. write-kubeconfig-mode: "0644".
+	Config      map[string]interface{} `yaml:"config,omitempty"`
+	ExtraArgs   []string               `yaml:"extra_args,flow,omitempty"`
+	Environment []string               `yaml:"environment,omitempty"`
 }
 
 type SSHConfig struct {

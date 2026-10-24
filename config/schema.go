@@ -49,6 +49,7 @@ var schema = `{
 				"system_docker": {"$ref": "#/definitions/docker_config"},
 				"upgrade": {"$ref": "#/definitions/upgrade_config"},
 				"docker": {"$ref": "#/definitions/docker_config"},
+				"k3s": {"$ref": "#/definitions/k3s_config"},
 				"registry_auths": {"type": "object"},
 				"defaults": {"$ref": "#/definitions/defaults_config"},
 				"resize_device": {"type": "string"},
@@ -145,6 +146,19 @@ var schema = `{
 				"userland_proxy": {"type": ["boolean", "null"]},
 				"userns_enabled": {"type": ["boolean", "null"]},
 				"insecure_registry": {"$ref": "#/definitions/list_of_strings"}
+			}
+		},
+
+		"k3s_config": {
+			"id": "#/definitions/k3s_config",
+			"type": "object",
+			"additionalProperties": false,
+
+			"properties": {
+				"command": {"type": "string"},
+				"config": {"type": "object"},
+				"extra_args": {"$ref": "#/definitions/list_of_strings"},
+				"environment": {"$ref": "#/definitions/list_of_strings"}
 			}
 		},
 
