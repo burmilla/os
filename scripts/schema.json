@@ -23,6 +23,7 @@
 
       "properties": {
         "console": {"type": "string"},
+        "engine": {"type": "string"},
         "environment": {"type": "object"},
         "cloud_init_services": {"type": "object"},
         "services": {"type": "object"},
@@ -189,6 +190,7 @@
 
       "properties": {
         "hostname": {"type": "string"},
+        "engine": {"type": "string"},
         "docker": {"type": "object"},
         "network": {"$ref": "#/definitions/network_config"}
       }

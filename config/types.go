@@ -123,6 +123,7 @@ type File struct {
 
 type RancherConfig struct {
 	Console             string                                    `yaml:"console,omitempty"`
+	Engine              string                                    `yaml:"engine,omitempty"`
 	Environment         map[string]string                         `yaml:"environment,omitempty"`
 	Services            map[string]*composeConfig.ServiceConfigV1 `yaml:"services,omitempty"`
 	BootstrapContainers map[string]*composeConfig.ServiceConfigV1 `yaml:"bootstrap,omitempty"`
@@ -231,6 +232,7 @@ type CloudInit struct {
 
 type Defaults struct {
 	Hostname         string                `yaml:"hostname,omitempty"`
+	Engine           string                `yaml:"engine,omitempty"`
 	Docker           DockerConfig          `yaml:"docker,omitempty"`
 	Network          netconf.NetworkConfig `yaml:"network,omitempty"`
 	SystemDockerLogs string                `yaml:"system_docker_logs,omitempty"`

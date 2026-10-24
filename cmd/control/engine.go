@@ -21,6 +21,7 @@ import (
 
 	"context"
 	composeConfig "github.com/burmilla/os/pkg/libcompose/config"
+	"github.com/burmilla/os/pkg/libcompose/project"
 	"github.com/burmilla/os/pkg/libcompose/project/options"
 	yaml "github.com/cloudfoundry-incubator/candiedyaml"
 	"github.com/codegangsta/cli"
@@ -34,7 +35,7 @@ func engineSubcommands() []cli.Command {
 	return []cli.Command{
 		{
 			Name:   "switch",
-			Usage:  "switch user Docker engine without a reboot",
+			Usage:  "switch engine without a reboot (an engine name, or a type such as docker for the latest one)",
 			Action: engineSwitch,
 			Flags: []cli.Flag{
 				cli.BoolFlag{
@@ -103,12 +104,12 @@ func engineSubcommands() []cli.Command {
 		},
 		{
 			Name:   "enable",
-			Usage:  "set user Docker engine to be switched on next reboot",
+			Usage:  "set engine to be switched on next reboot",
 			Action: engineEnable,
 		},
 		{
 			Name:  "list",
-			Usage: "list available Docker engines (include the Dind engines)",
+			Usage: "list available engines (include the Dind engines)",
 			Flags: []cli.Flag{
 				cli.BoolFlag{
 					Name:  "update, u",
@@ -122,27 +123,26 @@ func engineSubcommands() []cli.Command {
 
 func engineSwitch(c *cli.Context) error {
 	if len(c.Args()) != 1 {
-		log.Fatal("Must specify exactly one Docker engine to switch to")
+		log.Fatal("Must specify exactly one engine to switch to")
 	}
 	newEngine := c.Args()[0]
 
 	cfg := config.LoadConfig()
 
 	if newEngine == "latest" {
+		newEngine = config.EngineDocker
+	}
+	if config.IsEngineType(newEngine) {
 		engines := availableEngines(cfg, true)
-		if len(engines) == 0 {
-			log.Fatal("No Docker engines available in the service repositories")
+		latest := latestEngine(engines, newEngine)
+		if latest == "" {
+			log.Fatalf("No %s engines available in the service repositories", newEngine)
 		}
-		newEngine = engines[len(engines)-1]
-		currentEngine := CurrentEngine()
+		newEngine = latest
+		currentEngine, _ := CurrentEngine()
 		if newEngine == currentEngine {
 			log.Infof("Latest engine %s is already running", newEngine)
-			if cfg.Rancher.Docker.Engine != newEngine {
-				if err := config.Set("rancher.docker.engine", newEngine); err != nil {
-					log.Errorf("Failed to update rancher.docker.engine: %v", err)
-				}
-			}
-			return nil
+			return setEngine(cfg, newEngine)
 		}
 		log.Infof("Switching to engine %s", newEngine)
 	} else {
@@ -154,22 +154,60 @@ func engineSwitch(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	if err = project.Stop(context.Background(), 10, "docker"); err != nil {
+	// Stop the running engine first: only one engine runs at a time and the
+	// new one may be of another type (e.g. K3s replacing Docker).
+	if _, currentService := CurrentEngine(); currentService != "" {
+		if err = stopEngineService(project, currentService); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	serviceName, err := compose.LoadEngine(project, cfg, newEngine)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err = compose.LoadSpecialService(project, cfg, "docker", newEngine); err != nil {
+	if err = project.Up(context.Background(), options.Up{}, serviceName); err != nil {
 		log.Fatal(err)
 	}
 
-	if err = project.Up(context.Background(), options.Up{}, "docker"); err != nil {
-		log.Fatal(err)
+	return setEngine(cfg, newEngine)
+}
+
+// stopEngineService stops the container of a running engine service. The
+// service may not be part of the project when the configuration already
+// selects an engine of another type, so fall back to System Docker.
+func stopEngineService(project *project.Project, serviceName string) error {
+	if project.ServiceConfigs.Has(serviceName) {
+		return project.Stop(context.Background(), 10, serviceName)
 	}
 
-	if err := config.Set("rancher.docker.engine", newEngine); err != nil {
-		log.Errorf("Failed to update rancher.docker.engine: %v", err)
+	client, err := docker.NewSystemClient()
+	if err != nil {
+		return err
 	}
+	if err := client.ContainerStop(context.Background(), serviceName, 10); err != nil {
+		return fmt.Errorf("Failed to stop engine %s: %v", serviceName, err)
+	}
+	return nil
+}
 
+// setEngine stores the selected engine in rancher.engine. The legacy
+// rancher.docker.engine key is removed so that it does not shadow the new
+// value on releases that only read the legacy key.
+func setEngine(cfg *config.CloudConfig, engine string) error {
+	if cfg.Rancher.Engine == engine && cfg.Rancher.Docker.Engine == "" {
+		return nil
+	}
+	if err := config.Set("rancher.engine", engine); err != nil {
+		log.Errorf("Failed to update rancher.engine: %v", err)
+		return err
+	}
+	if cfg.Rancher.Docker.Engine != "" {
+		if err := config.Set("rancher.docker.engine", ""); err != nil {
+			log.Errorf("Failed to remove rancher.docker.engine: %v", err)
+		}
+	}
 	return nil
 }
 
@@ -277,51 +315,53 @@ func dindEngineRemove(c *cli.Context) error {
 
 func engineEnable(c *cli.Context) error {
 	if len(c.Args()) != 1 {
-		log.Fatal("Must specify exactly one Docker engine to enable")
+		log.Fatal("Must specify exactly one engine to enable")
 	}
 	newEngine := c.Args()[0]
 
 	cfg := config.LoadConfig()
-	validateEngine(newEngine, cfg)
+	if newEngine == "latest" {
+		newEngine = config.EngineDocker
+	}
+	if config.IsEngineType(newEngine) {
+		latest := latestEngine(availableEngines(cfg, true), newEngine)
+		if latest == "" {
+			log.Fatalf("No %s engines available in the service repositories", newEngine)
+		}
+		newEngine = latest
+	} else {
+		validateEngine(newEngine, cfg)
+	}
 
 	if err := compose.StageServices(cfg, newEngine); err != nil {
 		return err
 	}
 
-	if err := config.Set("rancher.docker.engine", newEngine); err != nil {
-		log.Errorf("Failed to update 'rancher.docker.engine': %v", err)
-	}
-
-	return nil
+	return setEngine(cfg, newEngine)
 }
 
 func engineList(c *cli.Context) error {
 	cfg := config.LoadConfig()
 	engines := availableEngines(cfg, c.Bool("update"))
-	currentEngine := CurrentEngine()
+	currentEngine, _ := CurrentEngine()
+	enabledEngine := cfg.SelectedEngine()
+	if config.IsEngineType(enabledEngine) {
+		enabledEngine = latestEngine(engines, enabledEngine)
+	}
 
-	i := 1
-	for _, engine := range engines {
+	for i, engine := range engines {
+		state := "disabled"
 		if engine == currentEngine {
-			if i == len(engines) {
-				fmt.Printf("current  %s (latest)\n", engine)
-			} else {
-				fmt.Printf("current  %s\n", engine)
-			}
-		} else if engine == cfg.Rancher.Docker.Engine {
-			if i == len(engines) {
-				fmt.Printf("enabled  %s (latest)\n", engine)
-			} else {
-				fmt.Printf("enabled  %s\n", engine)
-			}
-		} else {
-			if i == len(engines) {
-				fmt.Printf("disabled %s (latest)\n", engine)
-			} else {
-				fmt.Printf("disabled %s\n", engine)
-			}
+			state = "current "
+		} else if engine == enabledEngine {
+			state = "enabled "
 		}
-		i++
+		// the last engine of each type is the latest one
+		latest := ""
+		if i == len(engines)-1 || config.EngineType(engines[i+1]) != config.EngineType(engine) {
+			latest = " (latest)"
+		}
+		fmt.Printf("%s %s%s\n", state, engine, latest)
 	}
 
 	// check the dind container
@@ -376,28 +416,50 @@ func availableEngines(cfg *config.CloudConfig, update bool) []string {
 	return engines
 }
 
-// CurrentEngine gets the name of the docker that's running
-func CurrentEngine() (engine string) {
+// latestEngine returns the latest engine of the given type, or "" if there is none.
+func latestEngine(engines []string, engineType string) string {
+	latest := ""
+	for _, engine := range engines {
+		if config.EngineType(engine) == engineType {
+			latest = engine
+		}
+	}
+	return latest
+}
+
+// CurrentEngine gets the name of the engine that's running and the name of
+// its System Docker service (its type), e.g. docker-29.9.2 and docker. Both
+// are empty when no engine runs.
+func CurrentEngine() (engine, serviceName string) {
 	// sudo system-docker inspect --format "{{.Config.Image}}" docker
 	client, err := docker.NewSystemClient()
 	if err != nil {
-		log.Warnf("Failed to detect current docker: %v", err)
+		log.Warnf("Failed to detect current engine: %v", err)
 		return
 	}
-	info, err := client.ContainerInspect(context.Background(), "docker")
-	if err != nil {
-		log.Warnf("Failed to detect current docker: %v", err)
-		return
+	for _, engineType := range config.EngineTypes {
+		info, err := client.ContainerInspect(context.Background(), engineType)
+		if err != nil || !info.State.Running {
+			continue
+		}
+		// parse image name, then remove os- prefix and the engine suffix
+		image, err := reference.ParseNamed(info.Config.Image)
+		if err != nil {
+			log.Warnf("Failed to detect current engine(%s): %v", info.Config.Image, err)
+			continue
+		}
+		if t, ok := image.(reference.NamedTagged); ok {
+			return engineName(engineType, t.Tag()), engineType
+		}
 	}
-	// parse image name, then remove os- prefix and the engine suffix
-	image, err := reference.ParseNamed(info.Config.Image)
-	if err != nil {
-		log.Warnf("Failed to detect current docker(%s): %v", info.Config.Image, err)
-		return
-	}
-	if t, ok := image.(reference.NamedTagged); ok {
-		tag := t.Tag()
 
+	return
+}
+
+// engineName builds the engine name for a running engine container of the
+// given type from its image tag: os-docker:29.9.2 is docker-29.9.2.
+func engineName(engineType, tag string) string {
+	if engineType == config.EngineDocker {
 		// compatible with some patch image tags, such as 17.12.1-1,17.06.2-1,...
 		tag = strings.SplitN(tag, "-", 2)[0]
 
@@ -407,10 +469,8 @@ func CurrentEngine() (engine string) {
 			// < 17.03, docker-<version>
 			tag = tag + "-ce"
 		}
-		return "docker-" + tag
 	}
-
-	return
+	return engineType + "-" + tag
 }
 
 func preFlightValidate(c *cli.Context) error {

@@ -69,7 +69,7 @@ func Main() {
 		},
 		{
 			Name:        "engine",
-			Usage:       "manage which Docker engine is used",
+			Usage:       "manage which engine (Docker, ...) is used",
 			HideHelp:    true,
 			Subcommands: engineSubcommands(),
 		},

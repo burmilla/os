@@ -39,21 +39,30 @@ var (
 )
 
 func userDockerAction(c *cli.Context) error {
-	if err := copyBinaries(sourceDirectory, destDirectory); err != nil {
-		return err
-	}
-
-	if err := copyBinaries(pluginsSourceDirectory, pluginsDestDirectory); err != nil {
-		return err
-	}
-
-	if err := syscall.Mount("/host/sys", "/sys", "", syscall.MS_BIND|syscall.MS_REC, ""); err != nil {
+	if err := prepareEngine(); err != nil {
 		return err
 	}
 
 	cfg := config.LoadConfig()
 
 	return startDocker(cfg)
+}
+
+// prepareEngine runs in the engine's System Docker container: it copies the
+// engine binaries to /var/lib/rancher/engine, where the console links them
+// from, and makes the host /sys available.
+func prepareEngine() error {
+	if err := copyBinaries(sourceDirectory, destDirectory); err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(pluginsSourceDirectory); err == nil {
+		if err := copyBinaries(pluginsSourceDirectory, pluginsDestDirectory); err != nil {
+			return err
+		}
+	}
+
+	return syscall.Mount("/host/sys", "/sys", "", syscall.MS_BIND|syscall.MS_REC, "")
 }
 
 func copyBinaries(source, dest string) error {
@@ -146,12 +155,33 @@ func writeConfigCerts(cfg *config.CloudConfig) error {
 }
 
 func startDocker(cfg *config.CloudConfig) error {
-	storageContext := cfg.Rancher.Docker.StorageContext
+	dockerCfg := cfg.Rancher.Docker
+
+	args := dockerCfg.FullArgs()
+
+	log.Debugf("User Docker args: %v", args)
+
+	if dockerCfg.TLS {
+		if err := writeConfigCerts(cfg); err != nil {
+			return err
+		}
+	}
+
+	log.Info(dockerCfg.AppendEnv())
+
+	return execInConsole(cfg, dockerCfg.StorageContext, dockerCfg.AppendEnv(), append(dockerCommand, args...))
+}
+
+// execInConsole replaces the current process with command running inside the
+// console container (or another storage context), so that the engine shares
+// the console's mount namespace: its binaries and sockets are visible in the
+// console and the console's filesystem is visible to the engine.
+func execInConsole(cfg *config.CloudConfig, storageContext string, env, command []string) error {
 	if storageContext == "" {
 		storageContext = defaultStorageContext
 	}
 
-	log.Infof("Starting Docker in context: %s", storageContext)
+	log.Infof("Starting %s in context: %s", command[0], storageContext)
 
 	p, err := compose.GetProject(cfg, true, false)
 	if err != nil {
@@ -170,28 +200,14 @@ func startDocker(cfg *config.CloudConfig) error {
 		return err
 	}
 
-	dockerCfg := cfg.Rancher.Docker
-
-	args := dockerCfg.FullArgs()
-
-	log.Debugf("User Docker args: %v", args)
-
-	if dockerCfg.TLS {
-		if err := writeConfigCerts(cfg); err != nil {
-			return err
-		}
-	}
-
 	info, err := client.ContainerInspect(context.Background(), storageContext)
 	if err != nil {
 		return err
 	}
 
 	cmd := []string{"system-docker-runc", "exec", "--", info.ID, "env"}
-	log.Info(dockerCfg.AppendEnv())
-	cmd = append(cmd, dockerCfg.AppendEnv()...)
-	cmd = append(cmd, dockerCommand...)
-	cmd = append(cmd, args...)
+	cmd = append(cmd, env...)
+	cmd = append(cmd, command...)
 	log.Infof("Running %v", cmd)
 
 	return syscall.Exec("/usr/bin/system-docker-runc", cmd, os.Environ())

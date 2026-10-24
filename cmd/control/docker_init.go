@@ -108,7 +108,8 @@ func dockerInitAction(c *cli.Context) error {
 	}
 
 	// TODO: this should be replaced by a "Docker ready event watcher"
-	if err := ioutil.WriteFile(dockerDone, []byte(CurrentEngine()), 0644); err != nil {
+	engine, _ := CurrentEngine()
+	if err := ioutil.WriteFile(dockerDone, []byte(engine), 0644); err != nil {
 		log.Error(err)
 	}
 

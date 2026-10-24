@@ -25,6 +25,7 @@ var schema = `{
 
 			"properties": {
 				"console": {"type": "string"},
+				"engine": {"type": "string"},
 				"environment": {"type": "object"},
 				"cloud_init_services": {"type": "object"},
 				"services": {"type": "object"},
@@ -201,6 +202,7 @@ var schema = `{
 
 			"properties": {
 				"hostname": {"type": "string"},
+				"engine": {"type": "string"},
 				"docker": {"type": "object"},
 				"network": {"$ref": "#/definitions/network_config"},
 				"system_docker_logs": {"type": "string"}
