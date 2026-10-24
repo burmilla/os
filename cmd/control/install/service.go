@@ -54,14 +54,13 @@ func GetCacheImageList(cloudconfig string, oldcfg *config.CloudConfig) []string 
 		}
 	}
 
-	// docker engine
-	newEngine := newcfg.Rancher.Docker.Engine
-	if newEngine != "" && newEngine != oldcfg.Rancher.Docker.Engine {
-		engineImage := getServiceImage(newEngine, "docker", oldcfg, newcfg)
+	// engine
+	newEngine := newcfg.SelectedEngine()
+	if !config.IsEngineType(newEngine) && newEngine != oldcfg.SelectedEngine() {
+		engineImage := getServiceImage(newEngine, "engine", oldcfg, newcfg)
 		if engineImage != "" {
 			savedImages = append(savedImages, engineImage)
 		}
-
 	}
 
 	return savedImages
@@ -90,8 +89,11 @@ func getServiceImage(service, svctype string, oldcfg, newcfg *config.CloudConfig
 	switch svctype {
 	case "console":
 		serviceImage = formatImage(imageConfig["console"].Image, oldcfg, newcfg)
-	case "docker":
-		serviceImage = formatImage(imageConfig["docker"].Image, oldcfg, newcfg)
+	case "engine":
+		// an engine file defines a single service named after the engine type
+		for _, c := range imageConfig {
+			serviceImage = formatImage(c.Image, oldcfg, newcfg)
+		}
 	default:
 		serviceImage = formatImage(imageConfig[service].Image, oldcfg, newcfg)
 	}

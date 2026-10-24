@@ -206,6 +206,9 @@ func consoleInitFunc() error {
 		}
 	}
 
+	// tools of the selected engine, when it is not Docker
+	linkEngineBinaries(cfg, cfg.SelectedEngineType())
+
 	// font backslashes need to be escaped for when issue is output! (but not the others..)
 	if err := ioutil.WriteFile("/etc/issue", []byte(config.Banner), 0644); err != nil {
 		log.Error(err)
@@ -268,15 +271,13 @@ func consoleInitFunc() error {
 		log.Error(err)
 	}
 
-	// Check if user Docker has ever run in this installation yet and switch to latest/user defined version if not.
-	// Also pin "latest" to a real engine version, e.g. after an upgrade from a release that did not store it.
-	if _, err := os.Stat("/var/lib/docker/engine-id"); os.IsNotExist(err) || cfg.Rancher.Docker.Engine == "latest" {
-		dockerVersion := "latest"
-		if cfg.Rancher.Docker.Engine != dockerVersion {
-			dockerVersion = cfg.Rancher.Docker.Engine
-		}
-		log.Warn("Switching user Docker to " + dockerVersion)
-		cmd := exec.Command("/usr/bin/ros", "engine", "switch", dockerVersion)
+	// Pin the engine to a real version when the configuration only selects a
+	// type (the default is "docker", the latest Docker engine) or the legacy
+	// "latest", e.g. on first boot or after an upgrade from a release that
+	// did not store it, so that later boots keep that version.
+	if engine := cfg.SelectedEngine(); config.IsEngineType(engine) {
+		log.Warn("Switching engine to the latest " + engine)
+		cmd := exec.Command("/usr/bin/ros", "engine", "switch", engine)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
