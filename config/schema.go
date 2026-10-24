@@ -25,6 +25,7 @@ var schema = `{
 
 			"properties": {
 				"console": {"type": "string"},
+				"console_access": {"type": "boolean"},
 				"environment": {"type": "object"},
 				"cloud_init_services": {"type": "object"},
 				"services": {"type": "object"},

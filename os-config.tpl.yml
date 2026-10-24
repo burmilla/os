@@ -77,6 +77,7 @@ rancher:
     host: ["unix:///var/run/system-docker.sock"]
     userland_proxy: false
   console: {{.OS_CONSOLE}}
+  console_access: true
   cloud_init:
     datasources:
     - configdrive:/media/config-2

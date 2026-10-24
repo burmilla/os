@@ -295,6 +295,17 @@ func consoleInitFunc() error {
 
 	os.Setenv("TERM", "linux")
 
+	// respawn.conf always lists sshd and the gettys; with console access
+	// disabled they are only kept from starting, so that ros console access
+	// enable can start them without restarting the console (and User Docker
+	// with it).
+	if !cfg.Rancher.ConsoleAccess {
+		log.Info("Console access is disabled (rancher.console_access), not starting sshd and tty logins")
+		if err := writeConsoleAccessMarkers(); err != nil {
+			log.Error(err)
+		}
+	}
+
 	respawnBinPath, err := exec.LookPath("respawn")
 	if err != nil {
 		return err

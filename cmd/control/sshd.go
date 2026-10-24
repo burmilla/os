@@ -90,6 +90,9 @@ func sshdDisable(c *cli.Context) error {
 }
 
 func sshdEnable(c *cli.Context) error {
+	if !config.LoadConfig().Rancher.ConsoleAccess {
+		return fmt.Errorf("console access is disabled (rancher.console_access), enable it with: ros console access enable")
+	}
 	if err := os.Remove(sshdMarker()); err != nil && !os.IsNotExist(err) {
 		return err
 	}
