@@ -7,7 +7,6 @@ import (
 	"github.com/burmilla/os/pkg/libcompose/config"
 	"github.com/burmilla/os/pkg/libcompose/project"
 	"github.com/burmilla/os/pkg/libcompose/utils"
-	"github.com/docker/docker/runconfig/opts"
 	"github.com/docker/engine-api/types/container"
 	"github.com/docker/engine-api/types/network"
 	"github.com/docker/engine-api/types/strslice"
@@ -67,7 +66,7 @@ func volumes(c *config.ServiceConfig, ctx project.Context) map[string]struct{} {
 }
 
 func restartPolicy(c *config.ServiceConfig) (*container.RestartPolicy, error) {
-	restart, err := opts.ParseRestartPolicy(c.Restart)
+	restart, err := parseRestartPolicy(c.Restart)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +235,7 @@ func getVolumesFrom(volumesFrom []string, serviceConfigs *config.ServiceConfigs,
 func parseDevices(devices []string) ([]container.DeviceMapping, error) {
 	deviceMappings := []container.DeviceMapping{}
 	for _, device := range devices {
-		v, err := opts.ParseDevice(device)
+		v, err := parseDevice(device)
 		if err != nil {
 			return nil, err
 		}

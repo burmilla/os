@@ -1,0 +1,26 @@
+#!/bin/bash
+# Release build for an architecture other than amd64 (arm64, riscv64,
+# loong64). These are cross built on an amd64 host and get no ISO or
+# installer: the kernel, initrd and rootfs are attached to the release the
+# amd64 build created and the system images are pushed to Docker Hub.
+set -ex
+
+cd $(dirname $0)/..
+
+source ./scripts/version
+./scripts/release-build
+
+touch dist/publish.sh
+chmod 755 dist/publish.sh
+
+# gh finds a draft release by its tag too, unlike github-release
+echo "set -e" >> dist/publish.sh
+echo "cp ./dist/artifacts/${INITRD} ./dist/artifacts/initrd-${ARCH}" >> dist/publish.sh
+echo "cp ./dist/artifacts/vmlinuz-${KERNEL_VERSION} ./dist/artifacts/vmlinuz-${ARCH}" >> dist/publish.sh
+echo "cp ./dist/artifacts/rootfs${SUFFIX}.tar.gz ./dist/artifacts/rootfs-${ARCH}.tar.gz" >> dist/publish.sh
+echo "gh release upload ${VERSION} --repo burmilla/os --clobber ./dist/artifacts/initrd-${ARCH} ./dist/artifacts/vmlinuz-${ARCH} ./dist/artifacts/rootfs-${ARCH}.tar.gz" >> dist/publish.sh
+
+cat dist/images | sed 's/^/docker push /' >> dist/publish.sh
+
+echo "--- Run dist/publish.sh"
+cat dist/publish.sh
