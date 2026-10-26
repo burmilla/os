@@ -26,9 +26,9 @@ func TestCompareVersion(t *testing.T) {
 }
 
 func TestSortEngines(t *testing.T) {
-	engines := []string{"docker-29.9.2", "docker-29.10.0", "docker-25.0.14", "docker-29.6.1"}
+	engines := []string{"k3s-v1.34.1-k3s2", "docker-29.9.2", "qemu-10.1.0", "docker-29.10.0", "k3s-v1.34.1-k3s1", "docker-25.0.14", "k3s-v1.33.5-k3s1", "docker-29.6.1", "qemu-9.2.4"}
 	SortEngines(engines)
-	want := []string{"docker-25.0.14", "docker-29.6.1", "docker-29.9.2", "docker-29.10.0"}
+	want := []string{"docker-25.0.14", "docker-29.6.1", "docker-29.9.2", "docker-29.10.0", "k3s-v1.33.5-k3s1", "k3s-v1.34.1-k3s1", "k3s-v1.34.1-k3s2", "qemu-9.2.4", "qemu-10.1.0"}
 	for i := range want {
 		if engines[i] != want[i] {
 			t.Fatalf("SortEngines = %v, want %v", engines, want)

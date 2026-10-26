@@ -7,8 +7,7 @@ rancher:
     REGISTRY_DOMAIN: "docker.io"
   defaults:
     hostname: {{.HOSTNAME_DEFAULT}}
-    docker:
-      engine: latest
+    engine: docker
     network:
       dhcp_timeout: 10
       dns:
@@ -160,6 +159,7 @@ rancher:
       volumes:
       - /var/lib/user-docker:/var/lib/docker
       - /var/lib/m-user-docker:/var/lib/m-user-docker
+      - /var/lib/k3s/etc:/etc/rancher
     user-volumes:
       image: {{.OS_REPO}}/os-base:{{.VERSION}}{{.SUFFIX}}
       command: echo
@@ -409,7 +409,6 @@ rancher:
     image: {{.OS_REPO}}/os
     policy: download
   docker:
-    engine: latest
     group: docker
     host: ["unix:///var/run/docker.sock"]
     log_opts:

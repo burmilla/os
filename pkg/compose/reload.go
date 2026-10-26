@@ -2,7 +2,6 @@ package compose
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/pkg/docker"
@@ -32,6 +31,12 @@ func LoadService(p *project.Project, cfg *config.CloudConfig, useNetwork bool, s
 	m := map[interface{}]interface{}{}
 	if err = yaml.Unmarshal(bytes, &m); err != nil {
 		e := fmt.Errorf("Failed to parse YAML configuration for %s: %v", service, err)
+		log.Error(e)
+		return e
+	}
+
+	if engineType := cfg.SelectedEngineType(); engineType != config.EngineDocker && userService(m) {
+		e := fmt.Errorf("service %s runs in user Docker, which is not available with the %s engine", service, engineType)
 		log.Error(e)
 		return e
 	}
@@ -82,56 +87,169 @@ func loadConsoleService(cfg *config.CloudConfig, p *project.Project) error {
 	return LoadSpecialService(p, cfg, "console", cfg.Rancher.Console)
 }
 
-func loadEngineService(cfg *config.CloudConfig, p *project.Project) error {
-	engine := cfg.Rancher.Docker.Engine
+// LoadEngine loads the compose definition of an engine (a name from the
+// "engines" list of the service repositories, a local file or an URL) into p
+// and returns the name of the service it defines, which is the engine type:
+// docker, k3s, ... The previous definition of that service, e.g. the built-in
+// docker service, is replaced.
+func LoadEngine(p *project.Project, cfg *config.CloudConfig, engine string) (string, error) {
 	if engine == "" {
-		engine = cfg.Rancher.Defaults.Docker.Engine
+		return "", fmt.Errorf("empty engine name")
 	}
-	if engine == "" || (engine != "latest" && engine == cfg.Rancher.Defaults.Docker.Engine) {
-		return nil
+
+	bytes, err := network.LoadServiceResource(engine, true, cfg)
+	if err != nil {
+		return "", err
 	}
+
+	m := map[interface{}]interface{}{}
+	if err = yaml.Unmarshal(bytes, &m); err != nil {
+		return "", fmt.Errorf("Failed to parse YAML configuration for engine %s: %v", engine, err)
+	}
+
+	serviceName, err := engineServiceName(engine, m)
+	if err != nil {
+		return "", err
+	}
+
+	m = adjustContainerNames(m)
+	bytes, err = yaml.Marshal(m)
+	if err != nil {
+		return "", fmt.Errorf("Failed to marshal YAML configuration for engine %s: %v", engine, err)
+	}
+
+	// Save config in case load fails so we can roll back
+	previousConfig, ok := p.ServiceConfigs.Get(serviceName)
+	p.ServiceConfigs.Add(serviceName, &composeConfig.ServiceConfig{})
+
+	if err = p.Load(bytes); err != nil {
+		if ok {
+			p.ServiceConfigs.Add(serviceName, previousConfig)
+		}
+		return "", fmt.Errorf("Failed to load engine %s: %v", engine, err)
+	}
+
+	return serviceName, nil
+}
+
+// engineServiceName returns the single service an engine compose file defines.
+func engineServiceName(engine string, m map[interface{}]interface{}) (string, error) {
+	if len(m) != 1 {
+		return "", fmt.Errorf("engine %s must define exactly one service, found %d", engine, len(m))
+	}
+	for k := range m {
+		name, ok := k.(string)
+		if !ok || name == "" {
+			break
+		}
+		return name, nil
+	}
+	return "", fmt.Errorf("engine %s has an invalid service name", engine)
+}
+
+func loadEngineService(cfg *config.CloudConfig, p *project.Project) error {
+	engine := cfg.SelectedEngine()
 
 	// The configured engine may be missing from the service repository of
 	// this OS version (e.g. an engine selected on an older release). Fall
-	// back to the default engine instead of leaving the system without Docker.
-	// "latest" is not an engine in the repository (there is no os-docker:latest
-	// image), so it always resolves to the latest available engine.
+	// back to another engine of the same type instead of leaving the system
+	// without an engine. A bare type such as "docker" is not an engine in the
+	// repository (there is no os-docker:latest image), so it always resolves
+	// to the latest available engine of that type.
 	engines, err := network.GetEngines(cfg.Rancher.Repositories.ToArray())
 	if err == nil {
-		if fallback, ok := resolveEngine(engine, cfg.Rancher.Defaults.Docker.Engine, engines); !ok {
-			if engine != "latest" {
-				log.Warnf("Docker engine %s is not available in the service repositories, falling back to %s. Use 'ros engine list' and 'ros engine switch' to select an available engine.", engine, fallback)
-			}
-			engine = fallback
+		resolved, exact := resolveEngine(engine, engines)
+		if !exact && !config.IsEngineType(engine) {
+			log.Warnf("Engine %s is not available in the service repositories, falling back to %s. Use 'ros engine list' and 'ros engine switch' to select an available engine.", engine, resolved)
 		}
+		engine = resolved
 	}
-	if engine == "latest" {
-		// Engine index could not be read, keep the built-in docker service.
+	if config.IsEngineType(engine) {
+		// Engine index could not be read or has no engine of this type, keep
+		// the built-in service.
 		return nil
 	}
 
-	return LoadSpecialService(p, cfg, "docker", engine)
+	_, err = LoadEngine(p, cfg, engine)
+	return err
 }
 
-// resolveEngine returns engine and true if it can be loaded: it is a local
-// file or URL, it is listed in available, or the engine index could not be
-// read (available is empty). Otherwise it returns the engine to fall back to
-// and false: defaultEngine if it is listed in available, else the latest
-// available engine, as with 'ros engine switch latest'.
-func resolveEngine(engine, defaultEngine string, available []string) (string, bool) {
-	if len(available) == 0 || isLocalOrURL(engine) || util.Contains(available, engine) {
+// resolveEngine returns the engine to load and whether it is the requested
+// one. The requested engine is loaded as is when it is a local file or URL,
+// when it is listed in available or when the engine index could not be read
+// (available is empty). A bare engine type resolves to the latest available
+// engine of that type. An engine missing from available falls back to the
+// latest available engine of its type, else to the latest Docker engine, else
+// to the latest engine of any type. A bare type without any engine of that
+// type is returned unchanged.
+func resolveEngine(engine string, available []string) (string, bool) {
+	if len(available) == 0 || config.IsLocalOrURL(engine) || util.Contains(available, engine) {
 		return engine, true
 	}
-	if util.Contains(available, defaultEngine) {
-		return defaultEngine, false
+
+	engineType := config.EngineType(engine)
+	if latest := latestEngine(available, engineType); latest != "" {
+		return latest, false
 	}
-	sorted := append([]string(nil), available...)
-	versions.SortEngines(sorted)
-	return sorted[len(sorted)-1], false
+	if config.IsEngineType(engine) {
+		return engine, true
+	}
+	if latest := latestEngine(available, config.EngineDocker); latest != "" {
+		return latest, false
+	}
+	return latestEngine(available, ""), false
 }
 
-func isLocalOrURL(service string) bool {
-	return strings.HasPrefix(service, "/") || strings.HasPrefix(service, "http:/") || strings.HasPrefix(service, "https:/")
+// latestEngine returns the latest engine of the given type in available, or
+// of any type when engineType is empty. It returns "" when there is none.
+func latestEngine(available []string, engineType string) string {
+	candidates := []string{}
+	for _, engine := range available {
+		if engineType == "" || config.EngineType(engine) == engineType {
+			candidates = append(candidates, engine)
+		}
+	}
+	if len(candidates) == 0 {
+		return ""
+	}
+	versions.SortEngines(candidates)
+	return candidates[len(candidates)-1]
+}
+
+// engineServices removes from services the built-in engine services of
+// other types than the selected engine, e.g. the docker service when K3s is
+// the selected engine, so that only one engine is started. Services that run
+// in user Docker are removed too when the engine is not Docker.
+func engineServices(cfg *config.CloudConfig, services map[string]*composeConfig.ServiceConfigV1) map[string]*composeConfig.ServiceConfigV1 {
+	engineType := cfg.SelectedEngineType()
+	result := map[string]*composeConfig.ServiceConfigV1{}
+	for name, service := range services {
+		if config.IsEngineType(name) && name != engineType {
+			continue
+		}
+		if engineType != config.EngineDocker && service != nil && service.Labels[config.ScopeLabel] != config.System {
+			log.Warnf("Not starting service %s: it runs in user Docker, which is not available with the %s engine", name, engineType)
+			continue
+		}
+		result[name] = service
+	}
+	return result
+}
+
+// userService reports whether the service configuration m defines a service
+// that runs in user Docker rather than in System Docker.
+func userService(m map[interface{}]interface{}) bool {
+	for _, v := range m {
+		service, ok := v.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+		labels, ok := service["labels"].(map[interface{}]interface{})
+		if !ok || labels[config.ScopeLabel] != config.System {
+			return true
+		}
+	}
+	return false
 }
 
 func projectReload(p *project.Project, useNetwork *bool, loadConsole bool, environmentLookup *docker.ConfigEnvironment, authLookup *docker.ConfigAuthLookup) func() error {
@@ -142,7 +260,7 @@ func projectReload(p *project.Project, useNetwork *bool, loadConsole bool, envir
 		environmentLookup.SetConfig(cfg)
 		authLookup.SetConfig(cfg)
 
-		enabled = addServices(p, enabled, cfg.Rancher.Services)
+		enabled = addServices(p, enabled, engineServices(cfg, cfg.Rancher.Services))
 
 		for service, serviceEnabled := range cfg.Rancher.ServicesInclude {
 			if _, ok := enabled[service]; ok || !serviceEnabled {
@@ -170,7 +288,7 @@ func projectReload(p *project.Project, useNetwork *bool, loadConsole bool, envir
 		}
 
 		if err := loadEngineService(cfg, p); err != nil {
-			log.Errorf("Failed to load rancher.docker.engine=(%s): %v", cfg.Rancher.Docker.Engine, err)
+			log.Errorf("Failed to load engine %s: %v", cfg.SelectedEngine(), err)
 		}
 
 		return nil

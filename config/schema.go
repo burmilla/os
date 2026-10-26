@@ -25,6 +25,7 @@ var schema = `{
 
 			"properties": {
 				"console": {"type": "string"},
+				"engine": {"type": "string"},
 				"environment": {"type": "object"},
 				"cloud_init_services": {"type": "object"},
 				"services": {"type": "object"},
@@ -48,6 +49,8 @@ var schema = `{
 				"system_docker": {"$ref": "#/definitions/docker_config"},
 				"upgrade": {"$ref": "#/definitions/upgrade_config"},
 				"docker": {"$ref": "#/definitions/docker_config"},
+				"k3s": {"$ref": "#/definitions/k3s_config"},
+				"qemu": {"$ref": "#/definitions/qemu_config"},
 				"registry_auths": {"type": "object"},
 				"defaults": {"$ref": "#/definitions/defaults_config"},
 				"resize_device": {"type": "string"},
@@ -147,6 +150,32 @@ var schema = `{
 			}
 		},
 
+		"k3s_config": {
+			"id": "#/definitions/k3s_config",
+			"type": "object",
+			"additionalProperties": false,
+
+			"properties": {
+				"command": {"type": "string"},
+				"config": {"type": "object"},
+				"extra_args": {"$ref": "#/definitions/list_of_strings"},
+				"environment": {"$ref": "#/definitions/list_of_strings"}
+			}
+		},
+
+		"qemu_config": {
+			"id": "#/definitions/qemu_config",
+			"type": "object",
+			"additionalProperties": false,
+
+			"properties": {
+				"command": {"type": "string"},
+				"extra_args": {"$ref": "#/definitions/list_of_strings"},
+				"environment": {"$ref": "#/definitions/list_of_strings"},
+				"tools": {"$ref": "#/definitions/list_of_strings"}
+			}
+		},
+
 		"ssh_config": {
 			"id": "#/definitions/ssh_config",
 			"type": "object",
@@ -201,6 +230,7 @@ var schema = `{
 
 			"properties": {
 				"hostname": {"type": "string"},
+				"engine": {"type": "string"},
 				"docker": {"type": "object"},
 				"network": {"$ref": "#/definitions/network_config"},
 				"system_docker_logs": {"type": "string"}
