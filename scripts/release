@@ -5,4 +5,8 @@ cd $(dirname $0)/..
 
 source ./scripts/version
 
-./scripts/release-${ARCH}
+if [ -e ./scripts/release-${ARCH} ]; then
+    ./scripts/release-${ARCH}
+else
+    ./scripts/release-cross
+fi

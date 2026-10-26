@@ -324,6 +324,8 @@ rancher:
       volumes_from:
       - command-volumes
       - system-volumes
+    {{if or (eq "amd64" .ARCH) (eq "arm64" .ARCH) -}}
+    # container-crontab is not built for riscv64 and loong64 yet
     system-cron:
       {{if eq "amd64" .ARCH -}}
       image: burmilla/container-crontab:v0.5.0
@@ -338,6 +340,7 @@ rancher:
       restart: always
       volumes:
       - /var/run/system-docker.sock:/var/run/docker.sock
+    {{end -}}
     udev-cold:
       image: {{.OS_REPO}}/os-base:{{.VERSION}}{{.SUFFIX}}
       command: ros udev-settle

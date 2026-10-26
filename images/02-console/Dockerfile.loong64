@@ -1,0 +1,21 @@
+# Debian has no loong64 image yet (the port is not part of Debian 13), so
+# the loong64 console is the busybox based os-base image with the console
+# files from the Debian console. Used instead of Dockerfile by
+# scripts/build-images when ARCH=loong64.
+FROM burmilla/os-base
+
+COPY build/sshd_config.append.tpl /etc/ssh/
+COPY build/lsb-release /etc/
+
+RUN echo '## allow password less for rancher user' >> /etc/sudoers \
+    && echo 'rancher ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
+    && echo '## allow password less for docker user' >> /etc/sudoers \
+    && echo 'docker ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers \
+    && cat /etc/ssh/sshd_config > /etc/ssh/sshd_config.tpl \
+    && cat /etc/ssh/sshd_config.append.tpl >> /etc/ssh/sshd_config.tpl \
+    && rm -f /etc/ssh/sshd_config.append.tpl /etc/ssh/sshd_config \
+    && echo > /etc/motd
+
+COPY build/iscsid.conf /etc/iscsi/
+
+ENTRYPOINT ["/usr/bin/ros", "entrypoint"]

@@ -56,7 +56,11 @@ ARG DISTRIB_ID=BurmillaOS
 ARG KERNEL_VERSION=6.12.114-burmilla
 ARG KERNEL_URL_amd64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-x86.tar.gz
 ARG KERNEL_URL_arm64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-arm64.tar.gz
+ARG KERNEL_URL_riscv64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-riscv.tar.gz
+ARG KERNEL_URL_loong64=https://github.com/burmilla/os-kernel/releases/download/v${KERNEL_VERSION}/linux-${KERNEL_VERSION}-loongarch.tar.gz
 
+# Docker client for the build host (ARCH is the target, builds for the other
+# architectures run on an amd64 or arm64 host)
 ARG BUILD_DOCKER_URL_amd64=https://download.docker.com/linux/static/stable/x86_64/docker-26.1.4.tgz
 ARG BUILD_DOCKER_URL_arm64=https://download.docker.com/linux/static/stable/aarch64/docker-26.1.4.tgz
 
@@ -69,15 +73,23 @@ ARG OS_CONSOLE=default
 ARG OS_AUTOFORMAT=false
 ARG OS_FIRMWARE=true
 
-ARG OS_BASE_URL_amd64=https://github.com/burmilla/os-base/releases/download/v2025.02.18-1/os-base_amd64.tar.xz
-ARG OS_BASE_URL_arm64=https://github.com/burmilla/os-base/releases/download/v2025.02.18-1/os-base_arm64.tar.xz
+ARG OS_BASE_VERSION=v2025.02.18-2
+ARG OS_BASE_URL_amd64=https://github.com/burmilla/os-base/releases/download/${OS_BASE_VERSION}/os-base_amd64.tar.xz
+ARG OS_BASE_URL_arm64=https://github.com/burmilla/os-base/releases/download/${OS_BASE_VERSION}/os-base_arm64.tar.xz
+ARG OS_BASE_URL_riscv64=https://github.com/burmilla/os-base/releases/download/${OS_BASE_VERSION}/os-base_riscv64.tar.xz
+ARG OS_BASE_URL_loong64=https://github.com/burmilla/os-base/releases/download/${OS_BASE_VERSION}/os-base_loong64.tar.xz
 
-ARG OS_INITRD_BASE_URL_amd64=https://github.com/burmilla/os-initrd-base/releases/download/v2025.02.18-2/os-initrd-base-amd64.tar.gz
-ARG OS_INITRD_BASE_URL_arm64=https://github.com/burmilla/os-initrd-base/releases/download/v2025.02.18-2/os-initrd-base-arm64.tar.gz
+ARG OS_INITRD_BASE_VERSION=v2025.02.18-3
+ARG OS_INITRD_BASE_URL_amd64=https://github.com/burmilla/os-initrd-base/releases/download/${OS_INITRD_BASE_VERSION}/os-initrd-base-amd64.tar.gz
+ARG OS_INITRD_BASE_URL_arm64=https://github.com/burmilla/os-initrd-base/releases/download/${OS_INITRD_BASE_VERSION}/os-initrd-base-arm64.tar.gz
+ARG OS_INITRD_BASE_URL_riscv64=https://github.com/burmilla/os-initrd-base/releases/download/${OS_INITRD_BASE_VERSION}/os-initrd-base-riscv64.tar.gz
+ARG OS_INITRD_BASE_URL_loong64=https://github.com/burmilla/os-initrd-base/releases/download/${OS_INITRD_BASE_VERSION}/os-initrd-base-loong64.tar.gz
 
-ARG SYSTEM_DOCKER_VERSION=17.06.116
+ARG SYSTEM_DOCKER_VERSION=17.06.117
 ARG SYSTEM_DOCKER_URL_amd64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-amd64-${SYSTEM_DOCKER_VERSION}.tgz
 ARG SYSTEM_DOCKER_URL_arm64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-arm64-${SYSTEM_DOCKER_VERSION}.tgz
+ARG SYSTEM_DOCKER_URL_riscv64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-riscv64-${SYSTEM_DOCKER_VERSION}.tgz
+ARG SYSTEM_DOCKER_URL_loong64=https://github.com/burmilla/os-system-docker/releases/download/${SYSTEM_DOCKER_VERSION}/docker-loong64-${SYSTEM_DOCKER_VERSION}.tgz
 
 ARG AZURE_SERVICE=false
 ARG PROXMOXVE_SERVICE=false
@@ -89,7 +101,7 @@ ENV ARCH=${ARCH} \
     HOST_ARCH=${HOST_ARCH} \
     XZ_DEFAULTS="-T0"
 
-ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
+ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${HOST_ARCH} \
     BUILD_DOCKER_URL_amd64=${BUILD_DOCKER_URL_amd64} \
     BUILD_DOCKER_URL_arm64=${BUILD_DOCKER_URL_arm64} \
     DAPPER_HOST_ARCH=${DAPPER_HOST_ARCH} \
@@ -104,12 +116,18 @@ ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
     KERNEL_URL=KERNEL_URL_${ARCH} \
     KERNEL_URL_amd64=${KERNEL_URL_amd64} \
     KERNEL_URL_arm64=${KERNEL_URL_arm64} \
+    KERNEL_URL_riscv64=${KERNEL_URL_riscv64} \
+    KERNEL_URL_loong64=${KERNEL_URL_loong64} \
     OS_BASE_URL=OS_BASE_URL_${ARCH} \
     OS_BASE_URL_amd64=${OS_BASE_URL_amd64} \
     OS_BASE_URL_arm64=${OS_BASE_URL_arm64} \
+    OS_BASE_URL_riscv64=${OS_BASE_URL_riscv64} \
+    OS_BASE_URL_loong64=${OS_BASE_URL_loong64} \
     OS_INITRD_BASE_URL=OS_INITRD_BASE_URL_${ARCH} \
     OS_INITRD_BASE_URL_amd64=${OS_INITRD_BASE_URL_amd64} \
     OS_INITRD_BASE_URL_arm64=${OS_INITRD_BASE_URL_arm64} \
+    OS_INITRD_BASE_URL_riscv64=${OS_INITRD_BASE_URL_riscv64} \
+    OS_INITRD_BASE_URL_loong64=${OS_INITRD_BASE_URL_loong64} \
     OS_RELEASES_YML=${OS_RELEASES_YML} \
     OS_REPO=${OS_REPO} \
     OS_SERVICES_REPO=${OS_SERVICES_REPO} \
@@ -120,10 +138,17 @@ ENV BUILD_DOCKER_URL=BUILD_DOCKER_URL_${ARCH} \
     SYSTEM_DOCKER_URL=SYSTEM_DOCKER_URL_${ARCH} \
     SYSTEM_DOCKER_URL_amd64=${SYSTEM_DOCKER_URL_amd64} \
     SYSTEM_DOCKER_URL_arm64=${SYSTEM_DOCKER_URL_arm64} \
+    SYSTEM_DOCKER_URL_riscv64=${SYSTEM_DOCKER_URL_riscv64} \
+    SYSTEM_DOCKER_URL_loong64=${SYSTEM_DOCKER_URL_loong64} \
     AZURE_SERVICE=${AZURE_SERVICE} \
     PROXMOXVE_SERVICE=${PROXMOXVE_SERVICE} \
     SKIP_BUILD=${SKIP_BUILD}
 ENV PATH=${GOPATH}/bin:/usr/local/go/bin:$PATH
+
+# Images for another architecture than the build host are built and pulled
+# for the target architecture; the RUN steps of their Dockerfiles need
+# binfmt_misc handlers for it (qemu-user-static) on the build host.
+ENV DOCKER_DEFAULT_PLATFORM=linux/${ARCH}
 
 RUN mkdir -p ${DOWNLOADS}
 

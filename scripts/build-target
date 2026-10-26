@@ -10,6 +10,10 @@ cd $(dirname $0)/..
 if [ -n "${TOOLCHAIN:-}" ] && [ -n "${!TOOLCHAIN:-}" ]; then
   export CC=/usr/bin/${!TOOLCHAIN}-gcc
   export CGO_ENABLED=1
+elif [ -n "${GOARCH:-}" ] && [ "${GOARCH}" != "${HOST_ARCH:-$GOARCH}" ]; then
+  # no cross C tool chain: build pure Go, pkg/util then probes block
+  # devices itself instead of using libblkid
+  export CGO_ENABLED=0
 fi
 
 OUTPUT=${OUTPUT:-bin/ros}
