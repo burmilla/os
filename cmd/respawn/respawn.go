@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -19,11 +18,6 @@ import (
 
 	"github.com/codegangsta/cli"
 )
-
-// DisabledDir holds markers named after a command (e.g. "sshd"). While a
-// marker exists the command is not (re)started. It lives in /run so every
-// command is enabled again after a reboot.
-const DisabledDir = "/run/respawn.disabled"
 
 var (
 	running     = true
@@ -136,15 +130,6 @@ func execute(line string, doneChannel chan string) {
 	args := strings.Split(line, " ")
 
 	for {
-		if waitWhileDisabled(args[0]) {
-			// Do not count the pause as a fast restart.
-			count = 0
-			start = time.Now()
-		}
-		if !running {
-			break
-		}
-
 		cmd := exec.Command(args[0], args[1:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -179,24 +164,4 @@ func execute(line string, doneChannel chan string) {
 			start = time.Now()
 		}
 	}
-}
-
-// Disabled reports whether starting a command is disabled.
-func Disabled(command string) bool {
-	_, err := os.Stat(filepath.Join(DisabledDir, filepath.Base(command)))
-	return err == nil
-}
-
-// waitWhileDisabled blocks while the command is disabled and reports
-// whether it had to wait.
-func waitWhileDisabled(command string) bool {
-	waited := false
-	for running && Disabled(command) {
-		if !waited {
-			log.Infof("%s : disabled, waiting for %s to be removed", command, filepath.Join(DisabledDir, filepath.Base(command)))
-			waited = true
-		}
-		time.Sleep(time.Second)
-	}
-	return waited
 }
