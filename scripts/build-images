@@ -19,7 +19,14 @@ for i in $BASE/[0-9]*; do
         ${i}/prebuild.sh
     fi
 
-    if dapper -d --build -f ${i}/Dockerfile -- -t burmilla/${name} ${i}; then
+    # an image can have its own Dockerfile for an architecture, e.g. when
+    # its base image does not exist for it
+    dockerfile=${i}/Dockerfile
+    if [ -e ${i}/Dockerfile.${ARCH} ]; then
+        dockerfile=${i}/Dockerfile.${ARCH}
+    fi
+
+    if dapper -d --build -f ${dockerfile} -- -t burmilla/${name} ${i}; then
         docker tag burmilla/${name} ${tag}
         echo "${tag}" >> dist/images
     elif [ "$?" != "42" ]; then

@@ -25,6 +25,16 @@ A minimal Linux where almost everything runs in containers:
 - `scripts/` – dapper build steps (`build`, `package-*`, `release-*`), boot configs (`global.cfg`, `isolinux.cfg`, `grub.cfg`) and dev helpers (`run`, `run-common`).
 - `config/` – Go config types and schema; `vendor/` – vendored Go modules.
 
+## Architectures
+
+amd64 is the supported architecture (ISO, installer, `ros install`, user Docker). arm64, riscv64 and loong64 are **experimental**, cross built on the amd64 release runner:
+
+- `ARCH=<arch> make release` builds the kernel/initrd/rootfs of that arch; the `release` workflow does it for all three after the amd64 build and attaches `initrd-<arch>`, `vmlinuz-<arch>` and `rootfs-<arch>.tar.gz` to the same draft release (`scripts/release-cross`). `build-test` has an `arch` input.
+- `ros` is built with `CGO_ENABLED=0` for other archs than the build host (no cross C tool chain); `pkg/util/blkid_probe.go` replaces the libblkid calls then. Go tests are only run for the host arch.
+- System images are built for the target arch (`DOCKER_DEFAULT_PLATFORM=linux/<arch>` in the build image), which needs `qemu-user-static` on the build host. An image can have a `Dockerfile.<arch>`: `images/02-console/Dockerfile.loong64` is a busybox console on os-base because Debian has no loong64 image.
+- Pins per arch live in `Dockerfile.dapper` (`KERNEL_URL_*`, `OS_BASE_URL_*`, `OS_INITRD_BASE_URL_*`, `SYSTEM_DOCKER_URL_*`). Kernel assets are named `riscv` and `loongarch` in os-kernel releases.
+- Not available on riscv64/loong64 yet: user Docker engines (no upstream riscv64/loong64 static Docker), `container-crontab` (system-cron is left out of os-config for them), ISO/installer, `make run` in QEMU.
+
 ## Build and test
 
 Everything builds inside dapper (`Dockerfile.dapper`, needs Docker on the host):
@@ -45,8 +55,8 @@ Many code paths need root and a real System Docker, so unit tests cover only par
 
 ## Release workflow
 
-1. Bump pinned components in `Dockerfile.dapper` (kernel, os-base, os-initrd-base, system-docker) when their repos publish new releases.
-2. Merge to `master`, tag `vX.Y.Z[-betaN|-rcN]`, then run the `release` workflow (`.github/workflows/create-release.yml`, manual dispatch from the tag). It runs `make release` and `dist/publish.sh` (Docker Hub images + GitHub release assets).
+1. Bump pinned components in `Dockerfile.dapper` (kernel, os-base, os-initrd-base, system-docker) when their repos publish new releases. os-base, os-initrd-base and os-system-docker publish all four architectures from one workflow run (amd64 creates the release, the others attach to it).
+2. Merge to `master`, then run the `release` workflow (`.github/workflows/create-release.yml`, manual dispatch with version, type and number inputs). It builds amd64, creates the tag and a draft release with the ISO and `dist/publish.sh` output (Docker Hub images + GitHub release assets), then cross builds the experimental architectures and attaches their artifacts.
 3. Add the version to `burmilla/releases` (branch `v3.0.x`, used via `OS_RELEASES_YML`) so `ros os upgrade` offers it.
 4. Update docs in `burmilla/burmilla.github.io`.
 
@@ -55,7 +65,15 @@ Related repositories:
 - `burmilla/os-services` – optional services and Docker engines. v3 uses branch `v3.0.x` (`OS_SERVICES_REPO` + `/v3.0.x` in `os-config.tpl.yml`). Service images are built by its `build-service` / `build-docker` workflows, which skip tags that already exist on Docker Hub, so image changes need a new tag.
 - `burmilla/os-kernel`, `burmilla/os-base`, `burmilla/os-initrd-base`, `burmilla/os-system-docker`.
 
-## v3.0 status (written during v3.0.0-rc1 preparation)
+## v3.0 status
+
+### beta4 (after beta3)
+
+- os-base v2025.02.18-2 and os-initrd-base v2025.02.18-3: first releases with riscv64 and loong64 (buildroot 2026.02.3 for those two, 2025.02.18 for amd64/arm64), initrd CA bundle regenerated from Mozilla NSS 3.131.1 (eMudhra roots dropped).
+- System Docker 17.06.117: first release built for arm64, riscv64 and loong64.
+- Experimental arm64, riscv64 and loong64 builds (see Architectures); not boot-tested, kernel/initrd/rootfs only.
+
+### written during v3.0.0-rc1 preparation
 
 v3.0.0-beta1 shipped kernel 6.12.95, buildroot 2025.02.16, Debian 13 console, System Docker 17.06.113, `ros` moved from libcompose to compose-go with Go modules, cgroup v2 and UEFI installation.
 

@@ -9,6 +9,15 @@ on:
         description: 'VERSION to build as (default: short commit id)'
         required: false
         default: ''
+      arch:
+        description: 'Architecture (only amd64 gets an ISO and installer)'
+        type: choice
+        default: amd64
+        options:
+          - amd64
+          - arm64
+          - riscv64
+          - loong64
 
 permissions:
   contents: write
@@ -21,25 +30,34 @@ jobs:
       with:
         fetch-depth: '0'
 
+    # The system images are built for the target architecture, so their
+    # Dockerfile RUN steps need user mode emulation on the build host
+    - name: Install qemu-user-static
+      if: ${{ inputs.arch != 'amd64' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends qemu-user-static binfmt-support
+        ls /proc/sys/fs/binfmt_misc/
+
     - name: Build OS
       run: |
         if [ -n "${{ github.event.inputs.version }}" ]; then
           export VERSION="${{ github.event.inputs.version }}"
         fi
-        export ARCH=amd64
+        export ARCH=${{ inputs.arch }}
         make release
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: burmillaos-${{ github.event.inputs.version || github.sha }}
+        name: burmillaos-${{ github.event.inputs.version || github.sha }}-${{ inputs.arch }}
         if-no-files-found: error
         retention-days: 7
         path: |
           dist/artifacts/burmillaos.iso
           dist/artifacts/initrd-*
           dist/artifacts/vmlinuz-*
-          dist/artifacts/rootfs.tar.gz
+          dist/artifacts/rootfs*.tar.gz
 
     # Workflow artifacts are served from Azure blob storage, which is not
     # reachable from every network. Keep a copy on a draft release too.
@@ -47,8 +65,8 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        TAG=build-test-${GITHUB_SHA::8}
+        TAG=build-test-${GITHUB_SHA::8}-${{ inputs.arch }}
         cd dist/artifacts
         gh release create "$TAG" --draft --prerelease --title "build-test $TAG" \
-          --notes "Test build of ${GITHUB_REF_NAME} (${GITHUB_SHA}) by the build-test workflow. Not a release." \
-          burmillaos.iso initrd-* vmlinuz-* rootfs.tar.gz
+          --notes "Test build of ${GITHUB_REF_NAME} (${GITHUB_SHA}) for ${{ inputs.arch }} by the build-test workflow. Not a release." \
+          $(ls burmillaos.iso initrd-* vmlinuz-* rootfs*.tar.gz 2>/dev/null)
