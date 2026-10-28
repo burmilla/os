@@ -134,20 +134,25 @@ func engineSwitch(c *cli.Context) error {
 			log.Fatal("No Docker engines available in the service repositories")
 		}
 		newEngine = engines[len(engines)-1]
-		currentEngine := CurrentEngine()
-		if newEngine == currentEngine {
-			log.Infof("Latest engine %s is already running", newEngine)
-			if cfg.Rancher.Docker.Engine != newEngine {
-				if err := config.Set("rancher.docker.engine", newEngine); err != nil {
-					log.Errorf("Failed to update rancher.docker.engine: %v", err)
-				}
-			}
-			return nil
-		}
-		log.Infof("Switching to engine %s", newEngine)
+		log.Infof("Latest engine is %s", newEngine)
 	} else {
 		validateEngine(newEngine, cfg)
 	}
+
+	// Switching stops and recreates the docker service, so do nothing when
+	// the requested engine is already running. Otherwise a switch to the
+	// configured engine (e.g. by console-init on first boot) restarts user
+	// Docker for no reason.
+	if newEngine == CurrentEngine() {
+		log.Infof("Engine %s is already running", newEngine)
+		if cfg.Rancher.Docker.Engine != newEngine {
+			if err := config.Set("rancher.docker.engine", newEngine); err != nil {
+				log.Errorf("Failed to update rancher.docker.engine: %v", err)
+			}
+		}
+		return nil
+	}
+	log.Infof("Switching to engine %s", newEngine)
 
 	project, err := compose.GetProject(cfg, true, false)
 	if err != nil {

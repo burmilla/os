@@ -2,6 +2,7 @@ package control
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,11 +12,13 @@ import (
 	"strings"
 	"syscall"
 	"text/template"
+	"time"
 
 	"github.com/burmilla/os/cmd/cloudinitexecute"
 	"github.com/burmilla/os/config"
 	"github.com/burmilla/os/config/cmdline"
 	"github.com/burmilla/os/pkg/compose"
+	"github.com/burmilla/os/pkg/docker"
 	"github.com/burmilla/os/pkg/log"
 	"github.com/burmilla/os/pkg/util"
 
@@ -275,6 +278,11 @@ func consoleInitFunc() error {
 		if cfg.Rancher.Docker.Engine != dockerVersion {
 			dockerVersion = cfg.Rancher.Docker.Engine
 		}
+		// ros-sysinit starts the configured engine itself and may still be
+		// pulling or starting it. Switching at the same time stops the
+		// docker service under it and both processes recreate the
+		// container, leaving two of them fighting over dockerd.
+		waitForDockerService(dockerServiceWaitTimeout)
 		log.Warn("Switching user Docker to " + dockerVersion)
 		cmd := exec.Command("/usr/bin/ros", "engine", "switch", dockerVersion)
 		cmd.Stdout = os.Stdout
@@ -498,5 +506,29 @@ func startAppArmor() {
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		log.Errorf("At least one AppArmor profile failed to load: %v", err)
+	}
+}
+
+const dockerServiceWaitTimeout = 3 * time.Minute
+
+// waitForDockerService waits until the docker system service started by
+// ros-sysinit is running, or the timeout expires.
+func waitForDockerService(timeout time.Duration) {
+	client, err := docker.NewSystemClient()
+	if err != nil {
+		log.Warnf("Failed to connect to System Docker: %v", err)
+		return
+	}
+	deadline := time.Now().Add(timeout)
+	for {
+		info, err := client.ContainerInspect(context.Background(), "docker")
+		if err == nil && info.State != nil && info.State.Running {
+			return
+		}
+		if time.Now().After(deadline) {
+			log.Warnf("docker service is not running after %v", timeout)
+			return
+		}
+		time.Sleep(time.Second)
 	}
 }
